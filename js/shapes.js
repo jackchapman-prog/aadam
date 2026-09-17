@@ -4446,139 +4446,9 @@
   }
 
   /**
-   * Tapestry jaw line: [Main] A sc, [Cream] C sc, [Main] A sc — 2A+C === total.
-   * Optional proportional increases on a tapestry row (mask verticality).
-   */
-  function tapestryJawInstruction(mainColor, cream, brownEach, creamJaw, incTotal) {
-    const A = Math.max(0, Math.round(brownEach));
-    const C = Math.max(0, Math.round(creamJaw));
-    const total = 2 * A + C;
-    const add = Math.max(0, Math.round(incTotal || 0));
-    if (add <= 0) {
-      return {
-        instruction:
-          "[" +
-          mainColor +
-          "] " +
-          A +
-          " sc, [" +
-          cream +
-          "] " +
-          C +
-          " sc, [" +
-          mainColor +
-          "] " +
-          A +
-          " sc " +
-          stsCount(total),
-        brownEach: A,
-        creamJaw: C,
-        next: total,
-      };
-    }
-    // Proportional incs: cream share ≈ C/total; remainder to main, split L/R
-    let creamInc = Math.round((add * C) / total);
-    if (creamInc < 0) creamInc = 0;
-    if (creamInc > add) creamInc = add;
-    let mainInc = add - creamInc;
-    let leftInc = Math.floor(mainInc / 2);
-    let rightInc = mainInc - leftInc;
-    const nextA = A + leftInc; // left wing gains leftInc sts
-    const nextA2 = A + rightInc;
-    const nextC = C + creamInc;
-    const next = nextA + nextC + nextA2;
-    // Segment of size S with K incs → consume S, produce S+K (Rule D friendly)
-    function seg(label, scCount, incs) {
-      const S = scCount;
-      const K = incs;
-      let body;
-      if (K <= 0) {
-        body = S + " sc";
-      } else if (K === S) {
-        body = "inc x" + K;
-      } else if (S % K === 0) {
-        const n = S / K - 1;
-        body = n === 0 ? "inc x" + K : "(sc " + n + ", inc) x" + K;
-      } else {
-        const n = Math.floor(S / K) - 1;
-        const rem = S - (n + 1) * K;
-        body =
-          (n <= 0 ? "inc x" + K : "(sc " + n + ", inc) x" + K) +
-          (rem > 0 ? ", " + rem + " sc" : "");
-      }
-      return "[" + label + "] " + body;
-    }
-    return {
-      instruction:
-        seg(mainColor, A, leftInc) +
-        ", " +
-        seg(cream, C, creamInc) +
-        ", " +
-        seg(mainColor, A, rightInc) +
-        " " +
-        stsCount(next),
-      brownEach: Math.min(nextA, nextA2),
-      brownLeft: nextA,
-      brownRight: nextA2,
-      creamJaw: nextC,
-      next: next,
-    };
-  }
-
-  /**
-   * TAPESTRY COLOR RETENTION — canned 24→36 scale (CONTINUOUS_NOSE_FIRST).
-   * FORBIDDEN: unified single-color expand after a mid-row color round.
-   * Cream motifs from the hand-audited block; mains Rule-D balanced.
-   * Returns { lines, stitches, creamJaw, brownEach, maskCount }.
-   */
-  function tapestryColorRetention24to36(mainColor, cream) {
-    const M = mainColor;
-    const C = cream;
-    const lines = [
-      // 24 (8/8/8) → 30 (10/10/10); cream motif: 2 sc, inc, 3 sc, inc, 1 sc
-      "[" +
-        M +
-        "] (3 sc, inc) x2, [" +
-        C +
-        "] 2 sc, inc, 3 sc, inc, 1 sc, [" +
-        M +
-        "] (3 sc, inc) x2 " +
-        stsCount(30),
-      // 30 (10/10/10) → 36 (11/14/11)
-      "[" +
-        M +
-        "] 9 sc, inc, [" +
-        C +
-        "] (sc, inc) x4, 2 sc, [" +
-        M +
-        "] 9 sc, inc " +
-        stsCount(36),
-      // Hold wide cream mask
-      "[" + M + "] 11 sc, [" + C + "] 14 sc, [" + M + "] 11 sc " + stsCount(36),
-      "[" + M + "] 11 sc, [" + C + "] 14 sc, [" + M + "] 11 sc " + stsCount(36),
-      // Rebalance
-      "[" + M + "] 12 sc, [" + C + "] 12 sc, [" + M + "] 12 sc " + stsCount(36),
-      "[" + M + "] 12 sc, [" + C + "] 12 sc, [" + M + "] 12 sc " + stsCount(36),
-      // Narrow cream toward chin
-      "[" + M + "] 14 sc, [" + C + "] 8 sc, [" + M + "] 14 sc " + stsCount(36),
-      // Release mask — main only (first legal unified round)
-      "[" + M + "] 36 sc around " + stsCount(36),
-    ];
-    return {
-      lines: lines,
-      stitches: 36,
-      creamJaw: 0,
-      brownEach: 18,
-      maskCount: 7, // rounds with cream before the final main-only
-    };
-  }
-
-  /**
-   * PATH B — CONTINUOUS_NOSE_FIRST otter/water-mammal head.
-   *
-   * TAPESTRY COLOR RETENTION ENFORCEMENT: if the previous round had mid-row
-   * color changes, the next expansion MUST split incs across Main + Cream.
-   * Forbidden: bare planIncAround / unified (sc N, inc) x6 mid-mask.
+   * PATH B — CONTINUOUS_NOSE_FIRST (Simplified Round-Switch Method).
+   * R1–7 solid Cream (snout + jaw). Round 8: clean switch to Main.
+   * R8–close: solid Main only. FORBIDDEN: mid-row / tapestry color splits.
    */
   function buildOtterContinuousHeadPattern(name, diameterIn, gauge, options) {
     options = options || {};
@@ -4593,168 +4463,90 @@
     const lines = [];
     let r = 0;
     let stitches = 0;
-    let tapestryMaskCount = 0;
-    let creamJaw = 0;
-    let brownEach = 0;
-    let prevHadMidRowColor = false;
 
-    function pushRound(instruction, nextSts, midRowColor) {
-      if (
-        prevHadMidRowColor &&
-        nextSts > stitches &&
-        !midRowColor
-      ) {
-        // Hard retention: never emit unified-color expand after tapestry
-        throw new Error(
-          "TAPESTRY COLOR RETENTION: refused unified-color expand after mid-row color round"
-        );
-      }
+    function push(colorLabel, body, nextSts) {
       r += 1;
-      lines.push(r + ". " + instruction);
+      lines.push(r + ". [" + colorLabel + "] " + body);
       stitches = nextSts;
-      if (midRowColor) {
-        tapestryMaskCount += 1;
-        prevHadMidRowColor = true;
-      } else {
-        prevHadMidRowColor = false;
-      }
-    }
-
-    function recenterBlocks() {
-      brownEach = Math.floor((stitches - creamJaw) / 2);
-      const rem = stitches - creamJaw - 2 * brownEach;
-      if (rem !== 0) creamJaw += rem;
-      if ((stitches - creamJaw) % 2 === 1) creamJaw -= 1;
-      brownEach = (stitches - creamJaw) / 2;
-    }
-
-    function pushTapestryMaskRound(addSts) {
-      const add = Math.max(0, Math.min(6, addSts || 0));
-      const row = tapestryJawInstruction(
-        mainColor,
-        cream,
-        brownEach,
-        creamJaw,
-        add
-      );
-      pushRound(row.instruction, row.next, true);
-      creamJaw = row.creamJaw;
-      recenterBlocks();
     }
 
     lines.push(name);
     lines.push(
-      "Continuous nose-first head (one piece). Start in " +
+      "Continuous nose-first head (one piece). Simplified round-switch: Rounds 1–7 solid " +
         cream +
-        ". TAPESTRY COLOR RETENTION: after any mid-row color round, expansion rounds must keep [" +
-        cream +
-        "] + [" +
+        "; from Round 8 onward solid " +
         mainColor +
-        "] blocks — never a single unified color increase."
+        ". No mid-row color changes."
     );
     lines.push("");
 
-    // --- Phase A: cream-only snout tip ---
-    pushRound("[" + cream + "] 6 sc in MR " + stsCount(6), 6, false);
-    pushRound(
-      "[" + cream + "] " + planIncAround(stitches).instruction,
-      12,
-      false
-    );
-    pushRound("[" + cream + "] sc around " + stsCount(12), 12, false);
-    pushRound(
-      "[" + cream + "] " + planIncAround(stitches).instruction,
-      18,
-      false
-    );
-    pushRound("[" + cream + "] sc around " + stsCount(18), 18, false);
-
-    creamJaw = Math.max(6, Math.round(stitches * 0.28));
-    if ((stitches - creamJaw) % 2 === 1) creamJaw += 1;
-    brownEach = (stitches - creamJaw) / 2;
-    if (brownEach < 4) {
-      creamJaw = stitches - 8;
-      brownEach = 4;
-    }
+    // --- Rounds 1–7: solid Cream (snout + lower jaw) ---
+    push(cream, "6 sc in MR " + stsCount(6), 6);
+    push(cream, planIncAround(stitches).instruction, 12);
+    push(cream, "sc around " + stsCount(12), 12);
+    push(cream, planIncAround(stitches).instruction, 18);
+    push(cream, "sc around " + stsCount(18), 18);
+    push(cream, planIncAround(stitches).instruction, 24);
+    push(cream, "sc around " + stsCount(24), 24);
 
     lines.push(
-      "Begin tapestry/intarsia MASK LOCK. Mid-row color changes stay active through the face mask — no unified-color expands."
+      "Color switch at end of Round 7: drop " +
+        cream +
+        "; join " +
+        mainColor +
+        " for Round 8. Do not change colors mid-round."
     );
 
-    // Climb to 24 with split-color increases (18→24), then even hold
-    pushTapestryMaskRound(6); // 18→24
-    pushTapestryMaskRound(0); // even at 24 (8/8/8 when creamJaw≈8)
-
-    // Canonical 24→36 retention block when head max is 36 (chenille / capped)
-    if (maxStitches === 36 && stitches === 24) {
-      const block = tapestryColorRetention24to36(mainColor, cream);
-      for (let i = 0; i < block.lines.length; i += 1) {
-        const instr = block.lines[i];
-        const mid = /\[[^\]]*cream[^\]]*\]/i.test(instr);
-        const next = mid ? 36 : 36;
-        // First six lines stay at evolving counts; parse end count
-        const claimed = (instr.match(/\((\d+)\s*(?:sts?)?\)\s*$/i) || [])[1];
-        pushRound(instr, claimed ? parseInt(claimed, 10) : next, mid);
+    // --- Round 8+: solid Main (increases, even, decreases) ---
+    while (stitches < maxStitches) {
+      const inc = planIncAround(stitches);
+      let next = inc.next;
+      const add = next - stitches;
+      if (add > 8) {
+        next = Math.min(maxStitches, stitches + 6);
+        const place = next - stitches;
+        push(
+          mainColor,
+          "sc around, placing " +
+            place +
+            " evenly spaced inc " +
+            stsCount(next),
+          next
+        );
+      } else if (next > maxStitches) {
+        const place = maxStitches - stitches;
+        next = maxStitches;
+        push(
+          mainColor,
+          "sc around, placing " +
+            place +
+            " evenly spaced inc " +
+            stsCount(next),
+          next
+        );
+      } else {
+        push(mainColor, inc.instruction, next);
       }
-      creamJaw = 0;
-      brownEach = stitches / 2;
-    } else {
-      // Non-36 caps: keep proportional tapestry until max, then release
-      const needMask = Math.max(6, 8 - tapestryMaskCount);
-      for (let m = 0; m < needMask; m += 1) {
-        const room = maxStitches - stitches;
-        const isLast = m === needMask - 1;
-        const wantInc = !isLast && m % 2 === 0 && room >= 6;
-        pushTapestryMaskRound(wantInc ? Math.min(6, room) : 0);
-      }
-      while (stitches + 6 <= maxStitches) pushTapestryMaskRound(6);
-      if (stitches < maxStitches) pushTapestryMaskRound(maxStitches - stitches);
-      lines.push(
-        "End cream jaw mask after " +
-          tapestryMaskCount +
-          " tapestry rounds — continue in " +
-          mainColor +
-          " only."
-      );
-      prevHadMidRowColor = false;
     }
 
-    if (maxStitches === 36) {
-      lines.push(
-        "End cream jaw mask — continue in " +
-          mainColor +
-          " only for the back of the head (even rounds + close)."
-      );
-      prevHadMidRowColor = false;
-    }
-
-    // --- Phase C: main-only depth + close (width already at max) ---
     const even = Math.max(
       3,
       Math.min(6, roundsForHeight(diameterIn * 0.35, gauge.rpi))
     );
     for (let e = 0; e < even; e += 1) {
-      pushRound(
-        "[" + mainColor + "] sc around " + stsCount(stitches),
-        stitches,
-        false
-      );
+      push(mainColor, "sc around " + stsCount(stitches), stitches);
     }
     lines.push(
-      "Insert safety eyes above the cream jaw mask. Stuff the snout and head firmly as you close."
+      "Insert safety eyes just above the cream snout (Rounds 1–7). Stuff the snout and head firmly as you close."
     );
 
     while (stitches > 6) {
       const dec = planDecAround(stitches);
       let next = dec.next;
       if (next < 6) {
-        pushRound(
-          "[" + mainColor + "] Decrease evenly to 6 " + stsCount(6),
-          6,
-          false
-        );
+        push(mainColor, "Decrease evenly to 6 " + stsCount(6), 6);
       } else {
-        pushRound("[" + mainColor + "] " + dec.instruction, next, false);
+        push(mainColor, dec.instruction, next);
       }
     }
     lines.push("Close the opening at the back of the head and hide ends.");
@@ -4765,10 +4557,10 @@
       lines: lines,
       lastRound: r,
       designer: true,
-      geometry: "continuous nose-first head",
+      geometry: "continuous nose-first head (round-switch)",
       facialConstructionStyle: "CONTINUOUS_NOSE_FIRST",
-      tapestryMaskCount: tapestryMaskCount,
-      colorRetention24to36: maxStitches === 36,
+      creamRounds: 7,
+      colorSwitchRound: 8,
     };
   }
 

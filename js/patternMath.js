@@ -771,102 +771,74 @@
   }
 
   /**
-   * CRITICAL TRANSITION MASK VERTICALITY:
-   * Continuous-nose heads must keep Main+Cream color blocks for ≥6 rounds.
-   * Bare (sc N, inc) xM with no cream tag after a short cream flash = fail.
+   * CONTINUOUS_NOSE_FIRST — Simplified Round-Switch audit.
+   * FORBIDDEN: mid-row / tapestry color splits on the continuous head.
+   * Expect solid Cream early rounds, then solid Main after the switch cue.
    */
   function auditTapestryMaskVerticality(text) {
+    // Kept export name for app.js; now audits round-switch (no spliced rows).
     const lines = String(text || "").split(/\r?\n/);
     const issues = [];
     let inContinuousHead = false;
-    let streak = 0;
-    let maxStreak = 0;
-    let sawTapestryCue = false;
-    let prevMidRowColor = false;
+    let switchedToMain = false;
+    let creamRoundCount = 0;
 
     for (let i = 0; i < lines.length; i += 1) {
       const raw = lines[i];
 
-      if (
-        /continuous nose-first|tapestry\/intarsia mask lock/i.test(raw) ||
-        (/mask lock/i.test(raw) && /cream/i.test(raw))
-      ) {
+      if (/continuous nose-first|simplified round-switch/i.test(raw)) {
         inContinuousHead = true;
-        sawTapestryCue = true;
-        streak = 0;
-        maxStreak = 0;
-        prevMidRowColor = false;
+        switchedToMain = false;
+        creamRoundCount = 0;
       }
-      if (inContinuousHead && /end cream jaw mask/i.test(raw)) {
-        if (maxStreak < 6 && sawTapestryCue) {
+      if (inContinuousHead && /color switch at end of round/i.test(raw)) {
+        switchedToMain = true;
+        if (creamRoundCount < 7) {
           issues.push({
             line: i + 1,
             text: raw,
             message:
-              "TRANSITION MASK VERTICALITY: cream tapestry block only lasted " +
-              maxStreak +
-              " round(s); need at least 6 continuous vertical rounds with Main+Cream color blocks (no bare x6 sphere expand mid-mask).",
-            maxStreak: maxStreak,
+              "ROUND-SWITCH: expected 7 solid Cream rounds before the Main switch; found " +
+              creamRoundCount +
+              ".",
+            creamRoundCount: creamRoundCount,
           });
         }
+      }
+      if (
+        inContinuousHead &&
+        (/^##\s+/.test(raw) ||
+          /close the opening at the back of the head/i.test(raw))
+      ) {
         inContinuousHead = false;
-        sawTapestryCue = false;
-        streak = 0;
-        maxStreak = 0;
-        prevMidRowColor = false;
       }
 
       if (!inContinuousHead || !isRoundLine(raw)) continue;
 
       const hasCream = /\[[^\]]*cream[^\]]*\]/i.test(raw);
       const hasMain = /\[[^\]]*(?:main|brown|body)[^\]]*\]/i.test(raw);
-      const bareSphereInc =
-        /\(sc(?:\s+\d+)?,\s*inc\)\s*x\s*\d+/i.test(raw) && !hasCream;
 
       if (hasCream && hasMain) {
-        streak += 1;
-        if (streak > maxStreak) maxStreak = streak;
-        prevMidRowColor = true;
-      } else if (bareSphereInc && prevMidRowColor) {
         issues.push({
           line: i + 1,
           text: raw,
           message:
-            "TAPESTRY COLOR RETENTION: forbidden unified-color expand after a mid-row color round. Split increases across Main and Cream.",
-          streak: streak,
+            "NO SPLICED ROWS: mid-row tapestry color split is forbidden on CONTINUOUS_NOSE_FIRST (round-switch). Change color only at the end of a full round.",
         });
-        streak = 0;
-        prevMidRowColor = false;
-      } else if (bareSphereInc && streak > 0 && streak < 6) {
-        issues.push({
-          line: i + 1,
-          text: raw,
-          message:
-            "OVERRIDE CONFLICT: bare sphere increase cleared cream tags after only " +
-            streak +
-            " tapestry round(s). Mask window must keep [Main]/[Cream]/[Main] through increases.",
-          streak: streak,
-        });
-        streak = 0;
-        prevMidRowColor = false;
-      } else if (!hasCream) {
-        streak = 0;
-        if (!/sc around/i.test(raw) || !/\binc\b/i.test(raw)) {
-          prevMidRowColor = false;
-        }
+        continue;
       }
-    }
 
-    if (inContinuousHead && sawTapestryCue && maxStreak < 6) {
-      issues.push({
-        line: lines.length,
-        text: "",
-        message:
-          "TRANSITION MASK VERTICALITY: cream tapestry block only lasted " +
-          maxStreak +
-          " round(s); need at least 6 continuous vertical rounds.",
-        maxStreak: maxStreak,
-      });
+      if (!switchedToMain && hasCream && !hasMain) {
+        creamRoundCount += 1;
+      }
+      if (switchedToMain && hasCream) {
+        issues.push({
+          line: i + 1,
+          text: raw,
+          message:
+            "ROUND-SWITCH: Cream must not appear after the Round 8 Main color switch.",
+        });
+      }
     }
 
     return { ok: issues.length === 0, issues: issues };

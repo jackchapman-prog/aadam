@@ -95,7 +95,7 @@
         includesAny(name, ["otter"])
       ) {
         notes.push(
-          "For chibi floppy water mammals (otter/beaver/seal): facialConstructionStyle SEPARATE_PATCH (default sphere + sew-on cream oval) or CONTINUOUS_NOSE_FIRST (cream snout→head with tapestry jaw). Narrow fold-close arms on the upper chest angled inward; wide flat paddle feet; thick tapered tail as a backrest."
+          "For chibi floppy water mammals (otter/beaver/seal): facialConstructionStyle SEPARATE_PATCH (default sphere + sew-on cream oval) or CONTINUOUS_NOSE_FIRST (cream snout R1–7 then clean round-switch to main — no mid-row tapestry). Narrow fold-close arms on the upper chest angled inward; wide flat paddle feet; thick tapered tail as a backrest."
         );
       } else if (f.longEars || includesAny(name, ["bunny", "rabbit", "hare"])) {
         notes.push(
@@ -1277,7 +1277,7 @@
           key: "head",
           label: "Head",
           shape: "otter-continuous-head",
-          geometry: "continuous snout→head (tapestry jaw)",
+          geometry: "continuous snout→head (round-switch)",
           diameterIn: headD,
           count: 1,
           facialConstructionStyle: faceStyle,
@@ -1349,10 +1349,10 @@
 
       if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
         assembly.push(
-          "Crochet the continuous cream-to-main head first (tapestry jaw bridge), then ears, narrow arms, paddle feet, and thick tail."
+          "Crochet the continuous cream-to-main head first (Rounds 1–7 cream, then switch to main at Round 8 — no mid-row color changes), then ears, narrow arms, paddle feet, and thick tail."
         );
         assembly.push(
-          "Finish the head (eyes above the cream jaw, stuff snout firmly), sew ears high on the sides."
+          "Finish the head (eyes just above the cream snout, stuff snout firmly), sew ears high on the sides."
         );
       } else {
         assembly.push(

@@ -98,7 +98,7 @@ The engine must accept a **`facialConstructionStyle`** toggle and execute **exac
 
 Values:
 - `SEPARATE_PATCH` — default for beginners / clean separation (sphere + sew-on oval muzzle)
-- `CONTINUOUS_NOSE_FIRST` — advanced / no-sew face / photo-realistic profile (snout→head one piece)
+- `CONTINUOUS_NOSE_FIRST` — snout→head one piece; solid Cream R1–7 then clean round-switch to Main (no mid-row tapestry)
 - `auto` — pick from animal family / photo (otter/floppy water mammal default `SEPARATE_PATCH`; hippo-style continuous muzzle→head uses `CONTINUOUS_NOSE_FIRST`)
 
 ### PATH A: `SEPARATE_PATCH`
@@ -107,23 +107,16 @@ Values:
 - **MUZZLE:** Completely **separate** oval from a foundation chain (HARD COALESCENCE R1). 3–4 rounds deep, finish flat, lightly stuff, sew between the eyes in assembly.
 - **BANNED on this path:** mid-row color switches; continuous muzzle→head extensions.
 
-### PATH B: `CONTINUOUS_NOSE_FIRST`
+### PATH B: `CONTINUOUS_NOSE_FIRST` (Simplified Round-Switch Method)
 
-- **HEAD:** One continuous piece from the tip of the nose/snout expanding back into the head cavity.
-- **MUZZLE SEGMENT (R1–X):** Contrast color (cream/white) via tight MR or short foundation chain. Straight or gentle expand for snout length only.
-- **TRANSITION BRIDGE (RX+1–Y):** Widen into the head. Use **tapestry/intarsia mid-round** color blocks: main-color upper + contrast lower jaw/chin mask. Example: `[Brown] 14 sc, [Cream] 8 sc, [Brown] 14 sc (36 sts)`. Color-block stitch counts **must sum exactly** to the previous round total (Rule D).
-- **CRITICAL TRANSITION MASK VERTICALITY:** Contrast color blocks (cream face/jaw masks) **must not** exist for only one round. Enforce the contrast block across a **minimum of 6–8 continuous vertical rounds**. If an increase lands on a tapestry row, expand the Main and Contrast segments **proportionally** (increases that fall in each color block) so the facial patch stays centered on the muzzle axis. Example: on a 24-st round with cream 8 / main 16, adding 6 incs → cream gets ~2 and main ~4 (split evenly across the two main wings).
-- **OVERRIDE LOCK (no lazy sphere expand):** During the mask window, **FORBIDDEN** to print bare `planIncAround` / `(sc N, inc) x6` (or any untinted whole-round increase). Those clear color tags and destroy the vertical patch. All growth inside the mask must keep `[Main] …, [Cream] …, [Main] …` on the same line. Only after ≥6–8 cream-tagged rounds (and max width reached) may the pattern continue in main color alone.
-- ### TAPESTRY COLOR RETENTION ENFORCEMENT:
-  If `CONTINUOUS_NOSE_FIRST` is active, you are strictly **FORBIDDEN** from generating an expansion round (e.g. Rounds 8, 9, …) using a **single, unified color block** if the previous round contained mid-row color changes. You must programmatically split the increases across both active color fields to preserve the verticality of the face mask. When scaling a **24-st tapestry head → 36 sts**, apply this hand-audited retention block (Rule D balanced; cream motifs retained):
-  - Round 8: `[Main color] (3 sc, inc) x2, [Cream] 2 sc, inc, 3 sc, inc, 1 sc, [Main color] (3 sc, inc) x2 (30 sts)`
-  - Round 9: `[Main color] 9 sc, inc, [Cream] (sc, inc) x4, 2 sc, [Main color] 9 sc, inc (36 sts)` → blocks **11 / 14 / 11**
-  - Rounds 10–11: `[Main color] 11 sc, [Cream] 14 sc, [Main color] 11 sc (36 sts)`
-  - Rounds 12–13: `[Main color] 12 sc, [Cream] 12 sc, [Main color] 12 sc (36 sts)`
-  - Round 14: `[Main color] 14 sc, [Cream] 8 sc, [Main color] 14 sc (36 sts)`
-  - Round 15: `[Main color] 36 sc around (36 sts)`
-- **AXIS VERIFICATION:** Snout→head expansion **must not exceed +6 to +8 stitches per round** (prefer coupled multipliers that stay in that band). Continuous geometric slope — **no hourglass** (never decrease to a narrow neck then increase back up in the same unit).
-- **BANNED on this path:** separate sew-on muzzle patch as the primary face; hourglass neck defects; one-round-only cream “flash” masks; unified-color expands after a tapestry round.
+- **HEAD GEOMETRY:** The head must be worked as **ONE continuous piece** starting from the tip of the snout and expanding backward into the main head cavity.
+- **NO SPLICED ROWS:** Strictly **FORBIDDEN** to generate mid-row / tapestry color changes (e.g. no `[Main] 8 sc, [Cream] 8 sc` splits). All color transitions happen at the **exact end of a full round**.
+- **EXECUTION LAYOUT:**
+  1. **Rounds 1–7** — solid **Cream** only (build snout + lower jaw mask).
+  2. **Round 8 (transition bridge)** — drop Cream entirely; clean switch to **Main color** for the rest of that round and all following rounds.
+  3. **Rounds 8 through close** — solid **Main color** only (remaining increases, even rounds, decreases).
+- **AXIS VERIFICATION:** Snout→head expansion **must not exceed +6 to +8 stitches per round**. Continuous slope — **no hourglass**.
+- **BANNED on this path:** separate sew-on muzzle as the primary face; mid-row tapestry/intarsia; hourglass neck defects.
 
 Also honor Rule 5d legacy: hippo and any continuous snout unit keep width or gradual increases only.
 
