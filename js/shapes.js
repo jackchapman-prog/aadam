@@ -3919,6 +3919,484 @@
   }
 
 
+  /**
+   * Small foundation oval for sew-on patches (Ch 4–6).
+   * Same tip form as Rule B; allows shorter chains than sole ovals.
+   */
+  function flatOvalPatchFromChain(chLen) {
+    let ch = Math.max(4, Math.round(chLen || 5));
+    if (ch > 6) ch = 6;
+    const firstPass = ch - 2;
+    const returnPass = Math.max(1, ch - 3);
+    const r1 = firstPass + 3 + returnPass + 2;
+    return {
+      ch: ch,
+      firstPassLoops: firstPass,
+      returnPassLoops: returnPass,
+      produce: r1,
+      instruction:
+        "Ch " +
+        ch +
+        ". Starting in 2nd ch from hook: " +
+        firstPass +
+        " sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: " +
+        returnPass +
+        " sc, inc (" +
+        r1 +
+        ")",
+    };
+  }
+
+  /**
+   * Otter — clean solid sphere head (no continuous snout). Cap 36 (chenille) or 42 (worsted).
+   */
+  function buildOtterHeadPattern(name, diameterIn, gauge, options) {
+    options = options || {};
+    const chenille = (gauge.spi || 4) <= 3.5;
+    const cap = options.maxStitchCap || (chenille ? 36 : 42);
+    let maxStitches = stitchesForDiameter(diameterIn, gauge.spi);
+    if (maxStitches > cap) maxStitches = cap;
+    maxStitches = snapToMultiple(Math.max(24, maxStitches), 6);
+
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name);
+    lines.push(
+      "Solid-colored sphere head — no continuous snout. Sew the cream muzzle on later."
+    );
+    lines.push("");
+    r = 1;
+    lines.push(r + ". 6 sc in MR (6)");
+    stitches = 6;
+    while (stitches < maxStitches) {
+      r += 1;
+      const inc = planIncAround(stitches);
+      if (inc.next > maxStitches) {
+        const add = maxStitches - stitches;
+        lines.push(
+          r +
+            ". sc around, placing " +
+            add +
+            " evenly spaced inc (" +
+            maxStitches +
+            ")"
+        );
+        stitches = maxStitches;
+      } else {
+        lines.push(r + ". " + inc.instruction);
+        stitches = inc.next;
+      }
+    }
+
+    const even = Math.max(
+      3,
+      Math.min(6, roundsForHeight(diameterIn * 0.45, gauge.rpi))
+    );
+    lines.push(evenRoundsLine(r + 1, even, stitches));
+    r = r + even;
+    lines.push(
+      "Insert safety eyes on the upper half of the face, spaced for a chibi look. Stuff firmly."
+    );
+
+    while (stitches > 6) {
+      r += 1;
+      const dec = planDecAround(stitches);
+      let next = dec.next;
+      if (next < 6) {
+        next = 6;
+        lines.push(r + ". Decrease evenly to 6 (" + next + ")");
+      } else {
+        lines.push(r + ". " + dec.instruction);
+      }
+      stitches = next;
+    }
+    lines.push("Close the opening and hide the yarn tail.");
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: maxStitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      geometry: "otter sphere head",
+    };
+  }
+
+  /**
+   * Otter muzzle — separate cream oval patch, 3–4 rounds, sew-on (not continuous with head).
+   */
+  function buildOtterMuzzlePattern(name, gauge, options) {
+    options = options || {};
+    const oval = flatOvalPatchFromChain(options.chLen || 5);
+    const lines = [];
+    let r = 0;
+    let stitches = oval.produce;
+
+    lines.push(name);
+    lines.push(
+      "Cream / white contrast. Separate sew-on muzzle — do not work continuous with the head."
+    );
+    lines.push("");
+    r = 1;
+    lines.push(r + ". " + oval.instruction);
+
+    // R2: tip increases (+4) so consume matches and patch stays oval
+    r = 2;
+    const r2 = stitches + 4;
+    const sideExact = stitches / 2 - 2;
+    if (stitches % 2 === 0 && sideExact >= 1) {
+      lines.push(
+        r + ". (2 inc, " + sideExact + " sc) x2 (" + r2 + ")"
+      );
+      stitches = r2;
+    } else {
+      lines.push(
+        r +
+          ". sc around, placing 4 evenly spaced inc (" +
+          r2 +
+          ")"
+      );
+      stitches = r2;
+    }
+
+    r = 3;
+    lines.push(r + ". sc around (" + stitches + ")");
+
+    // Optional 4th round for a slightly deeper patch
+    r = 4;
+    lines.push(r + ". sc around (" + stitches + ")");
+
+    lines.push(
+      "Lightly stuff. Fasten off, leaving a long sewing tail. Keep the patch flat — do not close to a point."
+    );
+    lines.push(
+      "Sew centered on the lower face between the eyes. Embroider a dark nose + short mouth line on the muzzle."
+    );
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: stitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      geometry: "otter sew-on oval muzzle",
+    };
+  }
+
+  /**
+   * Otter forelimbs — narrow tubes (8–10 sts), fold-close for chest sewing.
+   */
+  function buildOtterNarrowArmPattern(name, heightIn, gauge) {
+    let around = Math.max(8, Math.min(10, stitchesForDiameter(0.7, gauge.spi)));
+    if (around % 2 === 1) around += 1;
+    if (around > 10) around = 10;
+    if (around < 8) around = 8;
+    const evenRounds = Math.max(5, roundsForHeight(heightIn || 1.4, gauge.rpi));
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name + " (make 2)");
+    lines.push(
+      "Narrow tube arms — flatten and close the top for sewing to the upper chest."
+    );
+    lines.push("");
+    r = 1;
+    if (around === 8) {
+      lines.push(r + ". 4 sc in MR (4)");
+      stitches = 4;
+      r = 2;
+      const inc = planIncAround(stitches);
+      lines.push(r + ". " + inc.instruction);
+      stitches = inc.next;
+      if (stitches < around) {
+        r += 1;
+        lines.push(
+          r +
+            ". sc around, placing " +
+            (around - stitches) +
+            " evenly spaced inc (" +
+            around +
+            ")"
+        );
+        stitches = around;
+      }
+    } else {
+      lines.push(r + ". 5 sc in MR (5)");
+      stitches = 5;
+      r = 2;
+      lines.push(
+        r + ". sc around, placing 5 evenly spaced inc (10)"
+      );
+      stitches = 10;
+    }
+
+    lines.push(evenRoundsLine(r + 1, evenRounds, stitches));
+    r = r + evenRounds;
+    const fold = flatFoldPlan(stitches);
+    if (fold.prepLine) {
+      r += 1;
+      lines.push(r + ". " + fold.prepLine);
+    }
+    lines.push(
+      "Fold flat and crochet " +
+        fold.foldSc +
+        " sc through both layers. Stuff lightly."
+    );
+    lines.push(
+      "Assembly: sew both arms close together on the upper chest, angling the paws inward so they can hold a small accessory (shell, stone, etc.)."
+    );
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: around,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      foldStitches: fold.foldSc,
+      lastTubeStitches: fold.lastSts,
+      geometry: "otter narrow arm",
+    };
+  }
+
+  /**
+   * Otter hindlimbs — wide flat paddle paws from oval sole; short height; fold-close.
+   */
+  function buildOtterPaddleFootPattern(name, gauge, options) {
+    options = options || {};
+    const oval = symmetricOvalFromChain(options.chLen || 6);
+    const totalBudget = Math.max(6, Math.min(8, options.maxRounds || 7));
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name + " (make 2)");
+    lines.push(
+      "Wide flat paddle feet — floppy seated look. Fold-close the top so feet stick up/forward on the body."
+    );
+    lines.push("");
+
+    // Use first 2–3 oval rounds for a dramatic flat sole, then short walls
+    const soleRounds = Math.min(3, oval.rounds.length);
+    for (let i = 0; i < soleRounds; i += 1) {
+      r += 1;
+      lines.push(r + ". " + oval.rounds[i].instruction);
+      stitches = oval.rounds[i].produce;
+    }
+
+    // One more widen if we still have round budget
+    let used = soleRounds;
+    if (used < totalBudget - 2 && stitches % 2 === 0) {
+      r += 1;
+      used += 1;
+      const next = stitches + 4;
+      const side = stitches / 2 - 2;
+      if (side >= 1) {
+        lines.push(r + ". (2 inc, " + side + " sc) x2 (" + next + ")");
+        stitches = next;
+      } else {
+        lines.push(
+          r +
+            ". sc around, placing 4 evenly spaced inc (" +
+            next +
+            ")"
+        );
+        stitches = next;
+      }
+    }
+
+    const wallRounds = Math.max(2, totalBudget - used - 1);
+    lines.push(evenRoundsLine(r + 1, wallRounds, stitches));
+    r = r + wallRounds;
+    lines.push("Stuff the sole firmly; keep the paddle flat.");
+
+    const fold = flatFoldPlan(stitches);
+    if (fold.prepLine) {
+      r += 1;
+      lines.push(r + ". " + fold.prepLine);
+    }
+    lines.push(
+      "Fold the opening flat (horizontal) and crochet " +
+        fold.foldSc +
+        " sc through both layers."
+    );
+    lines.push(
+      "Assembly: sew to the lower front/base of the body so the paddles face up and forward in a floppy seated pose."
+    );
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: stitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      foldStitches: fold.foldSc,
+      lastTubeStitches: fold.lastSts,
+      geometry: "otter paddle foot",
+    };
+  }
+
+  /**
+   * Otter tail — thick tapered cone from tip up; base ≈ half body width (backrest).
+   */
+  function buildOtterThickTailPattern(name, lengthIn, gauge, options) {
+    options = options || {};
+    const bodyMax =
+      options.bodyMaxStitches != null
+        ? options.bodyMaxStitches
+        : stitchesForDiameter(options.bodyDiameterIn || 3.2, gauge.spi);
+    let baseTarget = Math.max(12, Math.round(bodyMax * 0.5));
+    if (baseTarget % 2 === 1) baseTarget += 1;
+    const totalRounds = Math.max(8, roundsForHeight(lengthIn || 2.5, gauge.rpi));
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name);
+    lines.push(
+      "Thick tapered tail worked tip → base. Stuff firmly — it acts as a backrest for the floppy body."
+    );
+    lines.push("");
+    r = 1;
+    lines.push(r + ". 6 sc in MR (6)");
+    stitches = 6;
+
+    let sinceInc = 0;
+    const gap = 2; // increase every 2–3 rows
+    while (stitches < baseTarget && r < totalRounds + 6) {
+      r += 1;
+      sinceInc += 1;
+      if (sinceInc >= gap && stitches < baseTarget) {
+        const inc = planIncAround(stitches);
+        if (inc.next > baseTarget) {
+          const add = baseTarget - stitches;
+          lines.push(
+            r +
+              ". sc around, placing " +
+              add +
+              " evenly spaced inc (" +
+              baseTarget +
+              ")"
+          );
+          stitches = baseTarget;
+        } else {
+          lines.push(r + ". " + inc.instruction);
+          stitches = inc.next;
+        }
+        sinceInc = 0;
+      } else {
+        lines.push(r + ". sc around (" + stitches + ")");
+      }
+    }
+
+    const baseEven = Math.max(2, Math.round(totalRounds * 0.15));
+    lines.push(evenRoundsLine(r + 1, baseEven, stitches));
+    r = r + baseEven;
+    lines.push(
+      "Stuff firmly toward the base. Fasten off, leaving a long sewing tail. Sew low on the back so the thick base props the body upright."
+    );
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: stitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      geometry: "otter thick cone tail",
+    };
+  }
+
+  /**
+   * Otter floppy body — plump egg/pear; sew-on limbs (not JAYG); open top for head.
+   */
+  function buildOtterBodyPattern(name, diameterIn, heightIn, gauge, options) {
+    options = options || {};
+    const chenille = (gauge.spi || 4) <= 3.5;
+    const cap = options.maxStitchCap || (chenille ? 36 : 48);
+    let maxStitches = stitchesForDiameter(diameterIn, gauge.spi);
+    if (maxStitches > cap) maxStitches = cap;
+    maxStitches = snapToMultiple(Math.max(30, maxStitches), 6);
+    const neck = snapToMultiple(
+      Math.max(18, Math.round(maxStitches * 0.55)),
+      6
+    );
+    const bellyEven = Math.max(
+      4,
+      roundsForHeight((heightIn || diameterIn) * 0.55, gauge.rpi)
+    );
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name);
+    lines.push(
+      "Chibi floppy body — plump belly, sew-on paddle feet, narrow arms, and thick tail backrest. Leave the top open for the head."
+    );
+    lines.push("");
+    r = 1;
+    lines.push(r + ". 6 sc in MR (6)");
+    stitches = 6;
+    while (stitches < maxStitches) {
+      r += 1;
+      const inc = planIncAround(stitches);
+      if (inc.next > maxStitches) {
+        const add = maxStitches - stitches;
+        lines.push(
+          r +
+            ". sc around, placing " +
+            add +
+            " evenly spaced inc (" +
+            maxStitches +
+            ")"
+        );
+        stitches = maxStitches;
+      } else {
+        lines.push(r + ". " + inc.instruction);
+        stitches = inc.next;
+      }
+    }
+
+    lines.push(evenRoundsLine(r + 1, bellyEven, stitches));
+    r = r + bellyEven;
+    lines.push(
+      "Mark lower-front for paddle feet and lower-back for the thick tail. Stuff the belly firmly."
+    );
+
+    while (stitches > neck) {
+      r += 1;
+      const dec = planDecAround(stitches);
+      let next = dec.next;
+      if (next < neck) {
+        next = neck;
+        lines.push(r + ". Decrease evenly to " + next + " (" + next + ")");
+      } else {
+        lines.push(r + ". " + dec.instruction);
+      }
+      stitches = next;
+    }
+
+    const topEven = Math.max(2, roundsForHeight(0.6, gauge.rpi));
+    lines.push(evenRoundsLine(r + 1, topEven, stitches));
+    r = r + topEven;
+    lines.push(
+      "Do not close. Fasten off, leaving a long tail to sew the finished head onto this opening."
+    );
+    lines.push(
+      "Arm placement: upper chest, close together, paws angled inward. Foot placement: lower front base, paddles up/forward."
+    );
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: maxStitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      geometry: "otter floppy body",
+    };
+  }
+
   global.AmigurumiShapes = {
     buildSpherePattern: buildSpherePattern,
     buildCylinderPattern: buildCylinderPattern,
@@ -3961,6 +4439,12 @@
     buildMartyTeddyEarPattern: buildMartyTeddyEarPattern,
     buildMartyTeddyBodyPattern: buildMartyTeddyBodyPattern,
     buildChibiDeerHeadPattern: buildChibiDeerHeadPattern,
+    buildOtterHeadPattern: buildOtterHeadPattern,
+    buildOtterMuzzlePattern: buildOtterMuzzlePattern,
+    buildOtterNarrowArmPattern: buildOtterNarrowArmPattern,
+    buildOtterPaddleFootPattern: buildOtterPaddleFootPattern,
+    buildOtterThickTailPattern: buildOtterThickTailPattern,
+    buildOtterBodyPattern: buildOtterBodyPattern,
     stitchesForDiameter: stitchesForDiameter,
     chooseRepeatMultiplier: chooseRepeatMultiplier,
     planIncAround: planIncAround,

@@ -529,6 +529,46 @@
         part.diameterIn,
         gauge
       );
+    } else if (part.shape === "otter-head") {
+      pattern = shapes.buildOtterHeadPattern(
+        part.label,
+        part.diameterIn,
+        gauge,
+        { maxStitchCap: part.maxStitchCap }
+      );
+    } else if (part.shape === "otter-muzzle") {
+      pattern = shapes.buildOtterMuzzlePattern(part.label, gauge, {
+        chLen: part.chLen || 5,
+      });
+    } else if (part.shape === "otter-arm") {
+      pattern = shapes.buildOtterNarrowArmPattern(
+        part.label,
+        part.heightIn || 1.4,
+        gauge
+      );
+    } else if (part.shape === "otter-paddle-foot") {
+      pattern = shapes.buildOtterPaddleFootPattern(part.label, gauge, {
+        chLen: part.chLen || 6,
+        maxRounds: part.maxRounds || 7,
+      });
+    } else if (part.shape === "otter-tail") {
+      pattern = shapes.buildOtterThickTailPattern(
+        part.label,
+        part.heightIn || part.lengthIn || 2.5,
+        gauge,
+        {
+          bodyDiameterIn: part.bodyDiameterIn,
+          bodyMaxStitches: part.bodyMaxStitches,
+        }
+      );
+    } else if (part.shape === "otter-body") {
+      pattern = shapes.buildOtterBodyPattern(
+        part.label,
+        part.diameterIn,
+        part.heightIn || part.diameterIn,
+        gauge,
+        { maxStitchCap: part.maxStitchCap }
+      );
     } else {
       throw new Error("Unknown shape: " + part.shape);
     }

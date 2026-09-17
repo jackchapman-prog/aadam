@@ -90,6 +90,13 @@
         notes.push(
           "For teddies: join hind legs & arms into the body as-you-go; folded dome ears; sew-on snout; tiny ball tail; cheek shaping + needle sculpting."
         );
+      } else if (
+        f.floppyWaterMammal ||
+        includesAny(name, ["otter"])
+      ) {
+        notes.push(
+          "For otters (chibi floppy water mammal): solid sphere head + SEPARATE cream oval muzzle (sew-on); narrow fold-close arms on the upper chest angled inward; wide flat paddle feet sew-on at the lower base facing up/forward; thick tapered tail as a backrest. Do not use a continuous snout-to-head piece."
+        );
       } else if (f.longEars || includesAny(name, ["bunny", "rabbit", "hare"])) {
         notes.push(
           "Bunny-style: embroider the nose on the head — skip a sew-on muzzle."
@@ -168,6 +175,7 @@
       spikes: false,
       sitting: false,
       biped: false,
+      floppyWaterMammal: false,
     };
 
     let plan = "quadruped"; // default land mammal
@@ -383,6 +391,13 @@
     if (includesAny(name, ["squirrel"])) {
       features.bushyTail = true;
       features.sitting = true;
+      plan = "sitting";
+    }
+    // Chibi floppy water mammal (otter): separate muzzle, paddle feet, thick tail backrest
+    if (includesAny(name, ["otter", "sea otter", "river otter"])) {
+      features.sitting = true;
+      features.shortSnout = true;
+      features.floppyWaterMammal = true;
       plan = "sitting";
     }
 
@@ -814,6 +829,9 @@
     const isChinchilla = includesAny(analysis.name.toLowerCase(), [
       "chinchilla",
     ]);
+    const isOtter =
+      analysis.features.floppyWaterMammal ||
+      includesAny(analysis.name.toLowerCase(), ["otter"]);
     const bunnyStyle =
       f.longEars ||
       includesAny(analysis.name.toLowerCase(), ["bunny", "rabbit", "hare"]);
@@ -833,7 +851,9 @@
               ? 0.4
               : isTeddy
                 ? 0.4
-                : 0.42
+                : isOtter
+                  ? 0.4
+                  : 0.42
     );
     const bodyD =
       headD *
@@ -847,7 +867,9 @@
               ? 0.9
               : isTeddy
                 ? 0.9
-                : 0.8) *
+                : isOtter
+                  ? 0.95
+                  : 0.8) *
       bodyScale;
     const legH =
       headD *
@@ -861,17 +883,29 @@
               ? 0.32
               : isTeddy
                 ? 0.42
-                : 0.28) *
+                : isOtter
+                  ? 0.22
+                  : 0.28) *
       legScale;
     const armH =
       headD *
-      (isTeddy || isUnicorn ? 0.45 : isHippo ? 0.38 : isChinchilla ? 0.22 : 0.4);
+      (isTeddy || isUnicorn
+        ? 0.45
+        : isHippo
+          ? 0.38
+          : isChinchilla
+            ? 0.22
+            : isOtter
+              ? 0.32
+              : 0.4);
     const earExtra = bunnyStyle
       ? headD * 0.35
       : isChinchilla
         ? headD * 0.28
-        : headD * 0.22;
-    const tailLen = headD * (isCat || f.thinTail ? 0.7 : isChinchilla ? 0.55 : 0.25);
+        : isOtter
+          ? headD * 0.18
+          : headD * 0.22;
+    const tailLen = headD * (isCat || f.thinTail ? 0.7 : isChinchilla ? 0.55 : isOtter ? 0.85 : 0.25);
     const hornH = headD * 0.35;
     const muzzleLen = headD * (isHippo ? 0.42 : 0.2);
 
@@ -1213,6 +1247,89 @@
       );
       assembly.push("Sew ears to the top of the head; embroider brows/eyeliner.");
       assembly.push("Sew arms to the upper chest.");
+    } else if (isOtter) {
+      // Chibi floppy water mammal — separate muzzle, paddle feet, thick tail backrest
+      parts.push({
+        key: "head",
+        label: "Head",
+        shape: "otter-head",
+        geometry: "solid sphere (no continuous snout)",
+        diameterIn: headD,
+        count: 1,
+      });
+      parts.push({
+        key: "muzzle",
+        label: "Muzzle",
+        shape: "otter-muzzle",
+        geometry: "cream oval patch, sew-on",
+        chLen: 5,
+        count: 1,
+      });
+      parts.push({
+        key: "ear",
+        label: "Ears",
+        shape: "marty-teddy-ear",
+        geometry: "small rounded dome",
+        diameterIn: headD * 0.22,
+        count: 2,
+      });
+      parts.push({
+        key: "arm",
+        label: "Forelimbs / Arms",
+        shape: "otter-arm",
+        geometry: "narrow tube, fold-close",
+        heightIn: armH,
+        count: 2,
+      });
+      parts.push({
+        key: "leg",
+        label: "Hindlimbs / Paddle Feet",
+        shape: "otter-paddle-foot",
+        geometry: "flat oval paddle, fold-close",
+        chLen: 6,
+        maxRounds: 7,
+        count: 2,
+      });
+      parts.push({
+        key: "tail",
+        label: "Tail",
+        shape: "otter-tail",
+        geometry: "thick tapered cone (backrest)",
+        heightIn: tailLen,
+        bodyDiameterIn: bodyD,
+        count: 1,
+      });
+      parts.push({
+        key: "body",
+        label: "Body",
+        shape: "otter-body",
+        geometry: "plump floppy egg, sew-on limbs",
+        diameterIn: bodyD,
+        heightIn: Math.max(bodyD * 0.9, H * 0.32),
+        count: 1,
+      });
+
+      assembly.push(
+        "Crochet head, cream muzzle, ears, narrow arms, paddle feet, and thick tail first."
+      );
+      assembly.push(
+        "Finish the head: sew the cream oval muzzle between the eyes (lightly stuffed), embroider nose/mouth, sew ears high on the sides."
+      );
+      assembly.push(
+        "Crochet the plump body next (leave the top open). Stuff the belly firmly."
+      );
+      assembly.push(
+        "Sew paddle feet to the lower front/base so they face up and forward (floppy seated pose)."
+      );
+      assembly.push(
+        "Sew both narrow arms close together on the upper chest, angling the paws inward so they can hold a shell or small accessory."
+      );
+      assembly.push(
+        "Sew the thick tail low on the back as a backrest prop. Sew the finished head to the open top (no neck tube)."
+      );
+      assembly.push(
+        "Optional: crochet or find a tiny shell and tuck it between the paws."
+      );
     } else if (isTeddy) {
       // Owned Marty teddy — detailed write-up
       parts.push({
@@ -1407,7 +1524,13 @@
                 '" head on ' +
                 H.toFixed(1) +
                 '" tall — head+body one piece, JAYG feet/tail, sew-on arms, fur ears.'
-              : isTeddy
+              : isOtter
+                ? "Chibi floppy otter: ~" +
+                  headD.toFixed(1) +
+                  '" sphere head on ' +
+                  H.toFixed(1) +
+                  '" tall — separate cream muzzle, narrow chest arms, paddle feet, thick tail backrest.'
+                : isTeddy
                 ? "Sitting teddy style: ~" +
                   headD.toFixed(1) +
                   '" head on ' +
@@ -1450,7 +1573,13 @@
                   "Join tiny flat feet and bushy fur tail into the body; sew small unstuffed arms; large oval ears with fur edging.",
                   "Safety nose + eyes; embroider brows; bulky chenille + optional fur yarn.",
                 ]
-              : isTeddy
+              : isOtter
+                ? [
+                    "CHIBI FLOPPY WATER MAMMAL: sphere head + SEPARATE cream oval muzzle (never continuous snout→head).",
+                    "Narrow fold-close arms sewn close on the upper chest, paws angled inward for a shell/accessory.",
+                    "Wide flat paddle feet sew-on at the lower base facing up/forward; thick tapered tail as backrest support.",
+                  ]
+                : isTeddy
                 ? [
                     "Compare to sitting-teddy structure: JAYG limbs; sew-on snout + cheek shaping; folded dome ears; round MR feet; tiny ball tail.",
                     "Head ≈ 40% of height on ~12\" toys; body slightly smaller than head but wider than a kitten body.",

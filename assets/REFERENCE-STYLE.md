@@ -79,6 +79,15 @@ If a new animal is added, match the closest family construction **and** this det
 - Dangling chibi: vertical **pear body**, 2 arms + 2 long thin legs.
 - Sew-on cream muzzle; cream lower face; flat layered ears; branched antlers.
 
+## Otter (chibi floppy water mammal)
+
+- **Head:** solid sphere only (cap ~36 chenille / ~42 worsted) — **never** continuous snout→head.
+- **Muzzle:** separate cream/white oval patch (Ch 4–5), 3–4 rounds, lightly stuffed, sew between the eyes.
+- **Arms:** narrow tubes (8–10 sts), fold-close; sew close together on upper chest, paws angled inward (shell accessory).
+- **Feet:** wide flat paddle from oval sole; short walls (≤6–8 rounds total); fold-close so paddles face up/forward on the body base.
+- **Tail:** thick tapered cone tip→base (~half body width at base) — backrest support for the floppy body.
+- **Body:** plump egg/pear; sew-on limbs (not JAYG); head sewn to open top.
+
 ## How to pick a family for a new animal
 
 1. Same species as a ref → use that path exactly (Cat, Teddy Bear, Unicorn, Hippo, Chinchilla, Deer).
@@ -89,5 +98,6 @@ If a new animal is added, match the closest family construction **and** this det
    - Big chain muzzle / wide mouth animal → **hippo**
    - Head+body one piece + fur bushy tail + tiny feet → **chinchilla**
    - Dangling arms/legs + pear body → **deer**
+   - Floppy seated + sew-on oval muzzle + paddle feet + thick tail backrest → **otter**
 3. Change only species-specific bits (ears, face, tail, horns).
 4. Scale stitch counts from the user’s SPI/RPI and target height.
