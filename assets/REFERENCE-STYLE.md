@@ -81,8 +81,9 @@ If a new animal is added, match the closest family construction **and** this det
 
 ## Otter (chibi floppy water mammal)
 
-- **Head:** solid sphere only (cap ~36 chenille / ~42 worsted) — **never** continuous snout→head.
-- **Muzzle:** separate cream/white oval patch (Ch 4–5), 3–4 rounds, lightly stuffed, sew between the eyes.
+- **Face (`facialConstructionStyle`):**
+  - **SEPARATE_PATCH (default):** solid sphere head + separate cream oval muzzle (HARD COALESCENCE), sew between the eyes. No mid-row color switches.
+  - **CONTINUOUS_NOSE_FIRST (toggle):** cream snout→head one piece; tapestry jaw bridge mid-round; expand ≤ +6–8 sts/round; no hourglass.
 - **Arms:** narrow tubes (8–10 sts), fold-close; sew close together on upper chest, paws angled inward (shell accessory).
 - **Feet:** wide flat paddle from oval sole; short walls (≤6–8 rounds total); fold-close so paddles face up/forward on the body base.
 - **Tail:** thick tapered cone tip→base (~half body width at base) — backrest support for the floppy body.

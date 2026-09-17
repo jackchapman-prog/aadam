@@ -4445,6 +4445,167 @@
     };
   }
 
+  /**
+   * PATH B — CONTINUOUS_NOSE_FIRST otter/water-mammal head.
+   * Cream snout → tapestry jaw bridge → main-color head cavity.
+   * Expansion capped at +6–8 sts/round (no hourglass).
+   */
+  function buildOtterContinuousHeadPattern(name, diameterIn, gauge, options) {
+    options = options || {};
+    const chenille = (gauge.spi || 4) <= 3.5;
+    const cap = options.maxStitchCap || (chenille ? 36 : 42);
+    let maxStitches = stitchesForDiameter(diameterIn, gauge.spi);
+    if (maxStitches > cap) maxStitches = cap;
+    maxStitches = snapToMultiple(Math.max(30, maxStitches), 6);
+
+    const mainColor = options.mainColorLabel || "Main color";
+    const cream = options.creamLabel || "Cream";
+    const lines = [];
+    let r = 0;
+    let stitches = 0;
+
+    lines.push(name);
+    lines.push(
+      "Continuous nose-first head (one piece). Start in " +
+        cream +
+        "; switch to tapestry at the face bridge. Do not sew on a separate muzzle."
+    );
+    lines.push("");
+
+    // Muzzle tip — cream MR
+    r = 1;
+    lines.push(r + ". [" + cream + "] 6 sc in MR " + stsCount(6));
+    stitches = 6;
+    r = 2;
+    lines.push(r + ". [" + cream + "] " + planIncAround(stitches).instruction);
+    stitches = 12;
+    r = 3;
+    lines.push(r + ". [" + cream + "] sc around " + stsCount(12));
+    r = 4;
+    lines.push(r + ". [" + cream + "] " + planIncAround(stitches).instruction);
+    stitches = 18;
+    r = 5;
+    lines.push(r + ". [" + cream + "] sc around " + stsCount(18));
+
+    // Transition bridge — intarsia jaw mask; widen gently (+6)
+    r = 6;
+    const bridge = planIncAround(stitches);
+    // Keep +6 band; if multiplier > 8, fall back to even +6 placement
+    if (bridge.multiplier > 8) {
+      stitches = Math.min(maxStitches, stitches + 6);
+      lines.push(
+        r +
+          ". [" +
+          cream +
+          "] sc around, placing 6 evenly spaced inc " +
+          stsCount(stitches)
+      );
+    } else {
+      lines.push(r + ". [" + cream + "] " + bridge.instruction);
+      stitches = bridge.next;
+    }
+
+    r = 7;
+    // Color blocks must sum to stitches (Rule D)
+    let creamJaw = Math.max(6, Math.round(stitches * 0.28));
+    if ((stitches - creamJaw) % 2 === 1) creamJaw += 1;
+    let brownEach = (stitches - creamJaw) / 2;
+    if (brownEach < 4) {
+      creamJaw = stitches - 8;
+      brownEach = 4;
+    }
+    lines.push(
+      r +
+        ". [" +
+        mainColor +
+        "] " +
+        brownEach +
+        " sc, [" +
+        cream +
+        "] " +
+        creamJaw +
+        " sc, [" +
+        mainColor +
+        "] " +
+        brownEach +
+        " sc " +
+        stsCount(stitches)
+    );
+    lines.push(
+      "Keep the cream block centered on the lower face (chin/jaw). Carry or cut yarn cleanly for tapestry/intarsia."
+    );
+
+    // Expand into head cavity — main color; ≤ +6–8 per round
+    while (stitches < maxStitches) {
+      r += 1;
+      const inc = planIncAround(stitches);
+      let next = inc.next;
+      const add = next - stitches;
+      if (add > 8) {
+        next = Math.min(maxStitches, stitches + 6);
+        const place = next - stitches;
+        lines.push(
+          r +
+            ". [" +
+            mainColor +
+            "] sc around, placing " +
+            place +
+            " evenly spaced inc " +
+            stsCount(next)
+        );
+      } else if (next > maxStitches) {
+        const place = maxStitches - stitches;
+        next = maxStitches;
+        lines.push(
+          r +
+            ". [" +
+            mainColor +
+            "] sc around, placing " +
+            place +
+            " evenly spaced inc " +
+            stsCount(next)
+        );
+      } else {
+        lines.push(r + ". [" + mainColor + "] " + inc.instruction);
+      }
+      stitches = next;
+    }
+
+    const even = Math.max(
+      3,
+      Math.min(6, roundsForHeight(diameterIn * 0.4, gauge.rpi))
+    );
+    lines.push(evenRoundsLine(r + 1, even, stitches));
+    r = r + even;
+    lines.push(
+      "Insert safety eyes above the cream jaw bridge. Stuff the snout and head firmly as you close."
+    );
+
+    while (stitches > 6) {
+      r += 1;
+      const dec = planDecAround(stitches);
+      let next = dec.next;
+      if (next < 6) {
+        next = 6;
+        lines.push(r + ". Decrease evenly to 6 " + stsCount(6));
+      } else {
+        lines.push(r + ". " + dec.instruction);
+      }
+      stitches = next;
+    }
+    lines.push("Close the opening at the back of the head and hide ends.");
+    lines.push("");
+    return {
+      name: name,
+      maxStitches: maxStitches,
+      lines: lines,
+      lastRound: r,
+      designer: true,
+      geometry: "continuous nose-first head",
+      facialConstructionStyle: "CONTINUOUS_NOSE_FIRST",
+    };
+  }
+
   global.AmigurumiShapes = {
     buildSpherePattern: buildSpherePattern,
     buildCylinderPattern: buildCylinderPattern,
@@ -4488,6 +4649,7 @@
     buildMartyTeddyBodyPattern: buildMartyTeddyBodyPattern,
     buildChibiDeerHeadPattern: buildChibiDeerHeadPattern,
     buildOtterHeadPattern: buildOtterHeadPattern,
+    buildOtterContinuousHeadPattern: buildOtterContinuousHeadPattern,
     buildOtterMuzzlePattern: buildOtterMuzzlePattern,
     buildOtterNarrowArmPattern: buildOtterNarrowArmPattern,
     buildOtterPaddleFootPattern: buildOtterPaddleFootPattern,

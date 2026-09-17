@@ -374,6 +374,9 @@
         "HARD COALESCENCE: do not use '3 sc in the first ch' — use the fixed Ch→target map (10/12/14) with trailing inc."
       );
     }
+
+    const expect = hard[ch];
+    if (expect) {
       if (first !== expect.first || ret !== expect.ret) {
         issues.push(
           "HARD COALESCENCE: Ch " +

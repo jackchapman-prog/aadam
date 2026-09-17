@@ -22,7 +22,7 @@ Extracted text: `assets/*.txt` next to each PDF
 | Hippo | `PatternHippoHarry.pdf` | Sitting; chain-oval muzzle→head one piece; legs continue into body; JAYG arms; chain tail |
 | Chinchilla | `PatternChinchilla.pdf` | Sitting; head+body one piece; JAYG feet & fur tail; sew-on arms; fur-edged ears |
 | Deer | `reference-deer.webp` | Dangling chibi; pear body; 2 arms + 2 legs; sew-on muzzle; antlers |
-| Otter | (geometry template) | Floppy seated; sphere head + sew-on oval muzzle; paddle feet; thick tail backrest |
+| Otter | (geometry template) | Floppy seated; `facialConstructionStyle` SEPARATE_PATCH (default) or CONTINUOUS_NOSE_FIRST; paddle feet; thick tail backrest |
 
 ## Rules when Jack asks for a pattern
 

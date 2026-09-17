@@ -95,7 +95,7 @@
         includesAny(name, ["otter"])
       ) {
         notes.push(
-          "For chibi floppy water mammals (otter/beaver/seal): solid sphere head + SEPARATE cream oval muzzle (sew-on); narrow fold-close arms on the upper chest angled inward; wide flat paddle feet sew-on at the lower base facing up/forward; thick tapered tail as a backrest. Do not use a continuous snout-to-head piece."
+          "For chibi floppy water mammals (otter/beaver/seal): facialConstructionStyle SEPARATE_PATCH (default sphere + sew-on cream oval) or CONTINUOUS_NOSE_FIRST (cream snout→head with tapestry jaw). Narrow fold-close arms on the upper chest angled inward; wide flat paddle feet; thick tapered tail as a backrest."
         );
       } else if (f.longEars || includesAny(name, ["bunny", "rabbit", "hare"])) {
         notes.push(
@@ -1262,24 +1262,46 @@
       assembly.push("Sew ears to the top of the head; embroider brows/eyeliner.");
       assembly.push("Sew arms to the upper chest.");
     } else if (isOtter) {
-      // Chibi floppy water mammal — separate muzzle, paddle feet, thick tail backrest
-      parts.push({
-        key: "head",
-        label: "Head",
-        shape: "otter-head",
-        geometry: "solid sphere (no continuous snout)",
-        diameterIn: headD,
-        count: 1,
-      });
-      parts.push({
-        key: "muzzle",
-        label: "Muzzle",
-        shape: "otter-muzzle",
-        geometry: "cream oval patch, sew-on",
-        chLen: 5,
-        targetR1: 10,
-        count: 1,
-      });
+      // Face path: SEPARATE_PATCH (default) vs CONTINUOUS_NOSE_FIRST
+      let faceStyle = options.facialConstructionStyle || "auto";
+      if (faceStyle === "auto") faceStyle = "SEPARATE_PATCH";
+      if (
+        faceStyle !== "SEPARATE_PATCH" &&
+        faceStyle !== "CONTINUOUS_NOSE_FIRST"
+      ) {
+        faceStyle = "SEPARATE_PATCH";
+      }
+
+      if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
+        parts.push({
+          key: "head",
+          label: "Head",
+          shape: "otter-continuous-head",
+          geometry: "continuous snout→head (tapestry jaw)",
+          diameterIn: headD,
+          count: 1,
+          facialConstructionStyle: faceStyle,
+        });
+      } else {
+        parts.push({
+          key: "head",
+          label: "Head",
+          shape: "otter-head",
+          geometry: "solid sphere (SEPARATE_PATCH)",
+          diameterIn: headD,
+          count: 1,
+          facialConstructionStyle: faceStyle,
+        });
+        parts.push({
+          key: "muzzle",
+          label: "Muzzle",
+          shape: "otter-muzzle",
+          geometry: "cream oval patch, sew-on",
+          chLen: 5,
+          targetR1: 10,
+          count: 1,
+        });
+      }
       parts.push({
         key: "ear",
         label: "Ears",
@@ -1325,12 +1347,21 @@
         count: 1,
       });
 
-      assembly.push(
-        "Crochet head, cream muzzle, ears, narrow arms, paddle feet, and thick tail first."
-      );
-      assembly.push(
-        "Finish the head: sew the cream oval muzzle between the eyes (lightly stuffed), embroider nose/mouth, sew ears high on the sides."
-      );
+      if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
+        assembly.push(
+          "Crochet the continuous cream-to-main head first (tapestry jaw bridge), then ears, narrow arms, paddle feet, and thick tail."
+        );
+        assembly.push(
+          "Finish the head (eyes above the cream jaw, stuff snout firmly), sew ears high on the sides."
+        );
+      } else {
+        assembly.push(
+          "Crochet head, cream muzzle, ears, narrow arms, paddle feet, and thick tail first."
+        );
+        assembly.push(
+          "Finish the head: sew the cream oval muzzle between the eyes (lightly stuffed), embroider nose/mouth, sew ears high on the sides."
+        );
+      }
       assembly.push(
         "Crochet the plump body next (leave the top open). Stuff the belly firmly."
       );
@@ -2432,6 +2463,7 @@
         posture: options.posture || "auto",
         shaping: options.shaping || "auto",
         assemblyStyle: options.assemblyStyle || "jayg",
+        facialConstructionStyle: options.facialConstructionStyle || "auto",
       },
     };
   }

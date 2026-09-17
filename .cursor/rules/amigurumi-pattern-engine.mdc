@@ -92,15 +92,30 @@ When joining two limbs with a **chain bridge** to start a body (Harry hippo styl
 
 Use `chainBridgeJoinPlan(limbFinalSts, chainBridge)`. Pass the leg’s **full last-round count** (`joinStitches`), not the fold-half count.
 
-## 5d. Profile transition constraint — continuous snouts (CRITICAL)
+## 5d. Face architecture & `facialConstructionStyle` (CRITICAL)
 
-When a muzzle/snout is **one continuous piece** with the head:
+The engine must accept a **`facialConstructionStyle`** toggle and execute **exactly one** path — never mix them in the same head.
 
-- Row counts must form a **continuous geometric slope**.
-- **Never** decrease down to a narrow “neck” size and then increase back up to head size in the same unit (hourglass defect).
-- Muzzle → head: **maintain width** or use **gradual increases only**.
+Values:
+- `SEPARATE_PATCH` — default for beginners / clean separation (sphere + sew-on oval muzzle)
+- `CONTINUOUS_NOSE_FIRST` — advanced / no-sew face / photo-realistic profile (snout→head one piece)
+- `auto` — pick from animal family / photo (otter/floppy water mammal default `SEPARATE_PATCH`; hippo-style continuous muzzle→head uses `CONTINUOUS_NOSE_FIRST`)
 
-Applies to hippo muzzle-head and any similar one-piece face construction.
+### PATH A: `SEPARATE_PATCH`
+
+- **HEAD:** Clean single-color sphere. Maximize at target width (e.g. 36 / 42 / 48 sts), hold proportional depth even rounds, decrease symmetrically to close at the back/neck.
+- **MUZZLE:** Completely **separate** oval from a foundation chain (HARD COALESCENCE R1). 3–4 rounds deep, finish flat, lightly stuff, sew between the eyes in assembly.
+- **BANNED on this path:** mid-row color switches; continuous muzzle→head extensions.
+
+### PATH B: `CONTINUOUS_NOSE_FIRST`
+
+- **HEAD:** One continuous piece from the tip of the nose/snout expanding back into the head cavity.
+- **MUZZLE SEGMENT (R1–X):** Contrast color (cream/white) via tight MR or short foundation chain. Straight or gentle expand for snout length only.
+- **TRANSITION BRIDGE (RX+1–Y):** Widen into the head. Use **tapestry/intarsia mid-round** color blocks: main-color upper + contrast lower jaw/chin mask. Example: `[Brown] 14 sc, [Cream] 8 sc, [Brown] 14 sc (36 sts)`. Color-block stitch counts **must sum exactly** to the previous round total (Rule D).
+- **AXIS VERIFICATION:** Snout→head expansion **must not exceed +6 to +8 stitches per round** (prefer coupled multipliers that stay in that band). Continuous geometric slope — **no hourglass** (never decrease to a narrow neck then increase back up in the same unit).
+- **BANNED on this path:** separate sew-on muzzle patch as the primary face; hourglass neck defects.
+
+Also honor Rule 5d legacy: hippo and any continuous snout unit keep width or gradual increases only.
 
 ## 6. Rule C — 3D cone ear mandate
 

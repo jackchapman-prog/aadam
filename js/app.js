@@ -536,6 +536,13 @@
         gauge,
         { maxStitchCap: part.maxStitchCap }
       );
+    } else if (part.shape === "otter-continuous-head") {
+      pattern = shapes.buildOtterContinuousHeadPattern(
+        part.label,
+        part.diameterIn,
+        gauge,
+        { maxStitchCap: part.maxStitchCap }
+      );
     } else if (part.shape === "otter-muzzle") {
       pattern = shapes.buildOtterMuzzlePattern(part.label, gauge, {
         chLen: part.chLen || part.targetR1 || 10,
@@ -772,6 +779,9 @@
     const posture = document.getElementById("posture").value;
     const shaping = document.getElementById("shaping").value;
     const assemblyStyle = document.getElementById("assembly-style").value;
+    const facialConstructionStyle = document.getElementById(
+      "facial-construction"
+    ).value;
 
     const yarnProfile =
       window.AmigurumiPatternMath &&
@@ -788,6 +798,7 @@
       posture: posture,
       shaping: shaping,
       assemblyStyle: assemblyStyle,
+      facialConstructionStyle: facialConstructionStyle,
       yarnProfile: yarnProfile,
     });
 
@@ -918,6 +929,9 @@
   document.getElementById("shaping").addEventListener("change", scheduleRegen);
   document
     .getElementById("assembly-style")
+    .addEventListener("change", scheduleRegen);
+  document
+    .getElementById("facial-construction")
     .addEventListener("change", scheduleRegen);
   yarnWeightSelect.addEventListener("change", function () {
     applyYarnWeightDefaults();
