@@ -201,40 +201,39 @@
   }
 
   /**
-   * Oval tip increase with CONSTANT straight-side length (Linear Expansion Constraint).
-   * Increases cluster only at the two curved radiuses — never grow the side sc count.
+   * CRITICAL MULTI-ROUND OVAL SCALING STANDARD.
+   * expandIndex 0 (first expand after R1): (3 inc, S sc) x2
+   * expandIndex >= 1: ((inc, Y sc) x3, S sc) x2 where Y = expandIndex (Y += 1 each round)
+   * Straight side S never changes. Forbidden: ad-hoc (inc, sc, inc, sc…) micro-nesting.
    */
-  function planOvalRadiusInc(tipSts, side, tipIncs) {
-    const tip = Math.max(1, Math.round(tipSts));
+  function planOvalRadiusInc(side, expandIndex) {
     const S = Math.max(1, Math.round(side));
-    let add = tipIncs != null ? tipIncs : 3;
-    if (tip < add) add = tip;
-    // Prefer add that divides tip so spacing is even
-    while (add > 1 && tip % add !== 0) add -= 1;
-    const between = tip / add - 1;
-    let tipBody;
-    if (between <= 0) {
-      tipBody = add === 3 ? "3 inc" : add + " inc";
-    } else {
-      const chunks = [];
-      for (let i = 0; i < add; i += 1) {
-        chunks.push("inc");
-        if (between === 1) chunks.push("sc");
-        else chunks.push(between + " sc");
-      }
-      tipBody = chunks.join(", ");
-    }
+    const e = Math.max(0, Math.round(expandIndex || 0));
+    // Tip stitches entering this round: R1 tip=3; each expand adds +3 at each tip
+    const tip = 3 * (e + 1);
+    const tipNext = tip + 3;
     const consume = 2 * (tip + S);
-    const produce = 2 * (tip + add + S);
+    const produce = 2 * (tipNext + S);
+    let instruction;
+    let Y = 0;
+    if (e === 0) {
+      instruction = "(3 inc, " + S + " sc) x2 " + stsCount(produce);
+    } else {
+      Y = e; // 1, 2, 3…
+      const yTok = Y === 1 ? "sc" : Y + " sc";
+      instruction =
+        "((inc, " + yTok + ") x3, " + S + " sc) x2 " + stsCount(produce);
+    }
     return {
       tipSts: tip,
       side: S,
-      tipIncs: add,
-      tipNext: tip + add,
+      expandIndex: e,
+      Y: Y,
+      tipIncs: 3,
+      tipNext: tipNext,
       consume: consume,
       produce: produce,
-      instruction:
-        "(" + tipBody + ", " + S + " sc) x2 " + stsCount(produce),
+      instruction: instruction,
     };
   }
 
@@ -276,13 +275,15 @@
     let tip = tip0;
     let prev = r1;
     for (let e = 0; e < expandRounds; e += 1) {
-      const step = planOvalRadiusInc(tip, side, 3);
+      const step = planOvalRadiusInc(side, e);
       rounds.push({
         produce: step.produce,
         consume: step.consume,
         side: side,
         tipSts: tip,
         tipNext: step.tipNext,
+        expandIndex: e,
+        Y: step.Y,
         instruction: step.instruction,
       });
       tip = step.tipNext;
@@ -4072,9 +4073,9 @@
     r = 1;
     lines.push(r + ". " + oval.instruction);
 
-    // R2: tip-only increases; straight side stays (ch − 2)
+    // R2: standard first radius expand (3 inc, S sc) x2 — side stays ch−2
     r = 2;
-    const tipInc = planOvalRadiusInc(oval.tipSts || 3, oval.side, 3);
+    const tipInc = planOvalRadiusInc(oval.side, 0);
     lines.push(r + ". " + tipInc.instruction);
     stitches = tipInc.produce;
 
@@ -4209,7 +4210,8 @@
     if (used < totalBudget - 2) {
       r += 1;
       used += 1;
-      const step = planOvalRadiusInc(tipNow, oval.side, 3);
+      const expandIndex = soleRounds; // next index after rounds already printed (R1 + expands)
+      const step = planOvalRadiusInc(oval.side, expandIndex - 1);
       lines.push(r + ". " + step.instruction);
       stitches = step.produce;
       tipNow = step.tipNext;
@@ -4464,6 +4466,7 @@
     chooseRepeatMultiplier: chooseRepeatMultiplier,
     planIncAround: planIncAround,
     planDecAround: planDecAround,
+    planOvalRadiusInc: planOvalRadiusInc,
     flatFoldPlan: flatFoldPlan,
     symmetricOvalFromChain: symmetricOvalFromChain,
     faceShapingRoundPlan: faceShapingRoundPlan,

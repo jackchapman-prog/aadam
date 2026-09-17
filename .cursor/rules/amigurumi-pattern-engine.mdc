@@ -58,9 +58,15 @@ Straight side length = **(Ch − 2)** on **both** passes (same linear count). Ti
 Example Ch 6 → `(14 sts)`:
 `Ch 6. Starting in 2nd ch from hook: 4 sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: 4 sc, 3 sc in the first ch (14 sts)`
 
-**Linear Expansion Constraint:** later oval rounds must keep that straight-side count **constant**. Increases cluster only at the two curved radiuses (via `planOvalRadiusInc` / `symmetricOvalFromChain`). Forbidden: growing side sc from 4→7→10 between rounds.
+**CRITICAL MULTI-ROUND OVAL SCALING STANDARD:**
+When scaling a flat oval past Round 2, **forbidden** to invent micro-nested tip sequences that warp the straight axis (e.g. ad-hoc `inc, sc, inc, sc…` with changing side counts).
 
-Use `symmetricOvalFromChain()`; compiler audits equal sides = ch−2.
+Use only:
+- First expand after R1: `(3 inc, Straight_Side_Sts) x2`
+- Each later expand: `((inc, Y sc) x3, Straight_Side_Sts) x2` where **Y increases by exactly 1** each round (Y=1, then 2, then 3…)
+- `Straight_Side_Sts` stays **constant** (= Ch−2 from R1)
+
+Implement via `planOvalRadiusInc(side, expandIndex)` / `symmetricOvalFromChain()`. Any oval expand that changes the side count is a compiler failure.
 
 ## 5b. Limb integration orientation (sitting JAYG)
 

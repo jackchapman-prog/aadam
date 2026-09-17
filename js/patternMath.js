@@ -55,9 +55,19 @@
 
   /**
    * Expand one parenthetical group into base consume/produce.
-   * e.g. "1 sc, inc" → consume 2, produce 3; "3 inc, 3 sc" → consume 6, produce 9
+   * Supports nested radius forms: "(inc, sc) x3, 4 sc"
    */
   function expandGroupBody(body) {
+    const abs = expandAbsoluteRepeats(String(body || "").trim());
+    if (abs && abs.expansion && abs.expansion.length) {
+      return {
+        consume: abs.consume,
+        produce: abs.produce,
+        parts: abs.expansion.map(function (ex) {
+          return ex.body;
+        }),
+      };
+    }
     const parts = String(body)
       .split(",")
       .map(function (p) {
@@ -73,6 +83,31 @@
       produce += cost.produce;
     }
     return { consume: consume, produce: produce, parts: parts };
+  }
+
+  /** Match a leading balanced "( ... ) xN" including nested parentheses. */
+  function matchBalancedRepeat(rest) {
+    if (!rest || rest.charAt(0) !== "(") return null;
+    let depth = 0;
+    for (let i = 0; i < rest.length; i += 1) {
+      const ch = rest.charAt(i);
+      if (ch === "(") depth += 1;
+      else if (ch === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          const body = rest.slice(1, i);
+          const after = rest.slice(i + 1);
+          const xm = after.match(/^\s*x\s*(\d+)/i);
+          if (!xm) return null;
+          return {
+            body: body,
+            times: parseInt(xm[1], 10),
+            full: rest.slice(0, i + 1 + xm[0].length),
+          };
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -104,11 +139,11 @@
       rest = rest.replace(/^[,;\s]+/, "");
       if (!rest) break;
 
-      // Structured repeat: ( ... ) xN
-      let m = rest.match(/^\(([^)]+)\)\s*x\s*(\d+)/);
-      if (m) {
-        const group = expandGroupBody(m[1]);
-        const times = parseInt(m[2], 10);
+      // Structured repeat: ( ... ) xN — supports nested oval radius forms
+      let mBal = matchBalancedRepeat(rest);
+      if (mBal) {
+        const group = expandGroupBody(mBal.body);
+        const times = mBal.times;
         if (!group || times < 1) return null;
         const c = group.consume * times;
         const p = group.produce * times;
@@ -116,19 +151,19 @@
         produce += p;
         expansion.push({
           kind: "repeat",
-          body: m[1],
+          body: mBal.body,
           times: times,
           perConsume: group.consume,
           perProduce: group.produce,
           consume: c,
           produce: p,
         });
-        rest = rest.slice(m[0].length);
+        rest = rest.slice(mBal.full.length);
         continue;
       }
 
       // Bare "inc xN" / "dec xN"
-      m = rest.match(/^(inc)\s*x\s*(\d+)/);
+      let m = rest.match(/^(inc)\s*x\s*(\d+)/);
       if (m) {
         const times = parseInt(m[2], 10);
         consume += times;
@@ -219,6 +254,53 @@
       produce: produce,
       expansion: expansion,
     };
+  }
+
+  /**
+   * CRITICAL MULTI-ROUND OVAL SCALING STANDARD.
+   * Allowed tip expands only:
+   *   (3 inc, S sc) x2
+   *   ((inc, Y sc) x3, S sc) x2  with Y = 1,2,3…
+   * Forbidden: flattened micro-nests like (inc, sc, inc, sc, …, S sc) x2
+   */
+  function auditOvalScalingInstruction(instruction) {
+    const text = String(instruction || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\s*\(\d+\s*(?:sts?)?\)\s*$/i, "");
+    if (!/\bx\s*2\b/.test(text) || !/\binc\b/.test(text)) return null;
+
+    const standardFirst = /^\(3 inc,\s*\d+\s*sc\)\s*x2$/.test(text);
+    const standardLater =
+      /^\(\(inc,\s*(?:\d+\s+)?sc\)\s*x3,\s*\d+\s*sc\)\s*x2$/.test(text);
+    if (standardFirst || standardLater) return { ok: true, issues: [] };
+
+    const flatMicro =
+      /\(inc,\s*(?:\d+\s+)?sc,\s*inc/i.test(text) &&
+      !/\(inc,\s*(?:\d+\s+)?sc\)\s*x\s*3/i.test(text);
+    if (flatMicro) {
+      return {
+        ok: false,
+        issues: [
+          "Oval scaling: forbidden micro-nested tip sequence. Use (3 inc, S sc) x2 then ((inc, Y sc) x3, S sc) x2 with constant S.",
+        ],
+      };
+    }
+
+    // Looks like an oval tip expand but not the standard forms
+    if (
+      /\(.*inc.*\d+\s*sc\)\s*x2/.test(text) ||
+      /\(3 inc,\s*\d+\s*sc\)\s*x2/.test(text)
+    ) {
+      return {
+        ok: false,
+        issues: [
+          "Oval scaling: tip expand must be (3 inc, S sc) x2 or ((inc, Y sc) x3, S sc) x2 with constant straight side S.",
+        ],
+      };
+    }
+    return null;
   }
 
   /**
@@ -463,6 +545,17 @@
         // Cannot parse — soft skip (notes, face-shaping custom rounds)
         prev = claimed;
         continue;
+      }
+
+      const ovalScale = auditOvalScalingInstruction(instr);
+      if (ovalScale && !ovalScale.ok) {
+        for (let oi = 0; oi < ovalScale.issues.length; oi += 1) {
+          issues.push({
+            line: i + 1,
+            text: raw,
+            message: ovalScale.issues[oi],
+          });
+        }
       }
 
       // Foundation chain / MR-style start with no prior consume
@@ -775,6 +868,7 @@
     auditPatternText: auditPatternText,
     auditFlatFoldClosures: auditFlatFoldClosures,
     auditFoundationChainOval: auditFoundationChainOval,
+    auditOvalScalingInstruction: auditOvalScalingInstruction,
     expandAbsoluteRepeats: expandAbsoluteRepeats,
     enforceRowStepValidation: enforceRowStepValidation,
     yarnScaleProfile: yarnScaleProfile,
