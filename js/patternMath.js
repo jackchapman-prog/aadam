@@ -123,9 +123,11 @@
 
     // Strip trailing "(N)" if still present
     // Also strip placement labels like (back)/(front) so they are not mistaken for counts
+    // Strip tapestry color tags: [cream], [main color], etc.
     const cleaned = text
       .replace(/\s*\(\d+\s*(?:sts?)?\)\s*$/i, "")
       .replace(/\(\s*(?:back|front|chest|butt|tail|hip)\s*\)/gi, "")
+      .replace(/\[[^\]]+\]\s*/g, "")
       .trim();
 
     let consume = 0;
@@ -416,7 +418,11 @@
 
   /** How many stitches one instruction consumes / produces. */
   function consumeAndProduce(instruction, prevSts) {
-    const text = instruction.toLowerCase().replace(/\s+/g, " ").trim();
+    const text = instruction
+      .toLowerCase()
+      .replace(/\[[^\]]+\]\s*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (!text || prevSts == null) return null;
 
     // Grouped even: "sc around (5 rounds)"
@@ -765,6 +771,108 @@
   }
 
   /**
+   * CRITICAL TRANSITION MASK VERTICALITY:
+   * Continuous-nose heads must keep Main+Cream color blocks for ≥6 rounds.
+   * Bare (sc N, inc) xM with no cream tag after a short cream flash = fail.
+   */
+  function auditTapestryMaskVerticality(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const issues = [];
+    let inContinuousHead = false;
+    let streak = 0;
+    let maxStreak = 0;
+    let sawTapestryCue = false;
+    let prevMidRowColor = false;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const raw = lines[i];
+
+      if (
+        /continuous nose-first|tapestry\/intarsia mask lock/i.test(raw) ||
+        (/mask lock/i.test(raw) && /cream/i.test(raw))
+      ) {
+        inContinuousHead = true;
+        sawTapestryCue = true;
+        streak = 0;
+        maxStreak = 0;
+        prevMidRowColor = false;
+      }
+      if (inContinuousHead && /end cream jaw mask/i.test(raw)) {
+        if (maxStreak < 6 && sawTapestryCue) {
+          issues.push({
+            line: i + 1,
+            text: raw,
+            message:
+              "TRANSITION MASK VERTICALITY: cream tapestry block only lasted " +
+              maxStreak +
+              " round(s); need at least 6 continuous vertical rounds with Main+Cream color blocks (no bare x6 sphere expand mid-mask).",
+            maxStreak: maxStreak,
+          });
+        }
+        inContinuousHead = false;
+        sawTapestryCue = false;
+        streak = 0;
+        maxStreak = 0;
+        prevMidRowColor = false;
+      }
+
+      if (!inContinuousHead || !isRoundLine(raw)) continue;
+
+      const hasCream = /\[[^\]]*cream[^\]]*\]/i.test(raw);
+      const hasMain = /\[[^\]]*(?:main|brown|body)[^\]]*\]/i.test(raw);
+      const bareSphereInc =
+        /\(sc(?:\s+\d+)?,\s*inc\)\s*x\s*\d+/i.test(raw) && !hasCream;
+
+      if (hasCream && hasMain) {
+        streak += 1;
+        if (streak > maxStreak) maxStreak = streak;
+        prevMidRowColor = true;
+      } else if (bareSphereInc && prevMidRowColor) {
+        issues.push({
+          line: i + 1,
+          text: raw,
+          message:
+            "TAPESTRY COLOR RETENTION: forbidden unified-color expand after a mid-row color round. Split increases across Main and Cream.",
+          streak: streak,
+        });
+        streak = 0;
+        prevMidRowColor = false;
+      } else if (bareSphereInc && streak > 0 && streak < 6) {
+        issues.push({
+          line: i + 1,
+          text: raw,
+          message:
+            "OVERRIDE CONFLICT: bare sphere increase cleared cream tags after only " +
+            streak +
+            " tapestry round(s). Mask window must keep [Main]/[Cream]/[Main] through increases.",
+          streak: streak,
+        });
+        streak = 0;
+        prevMidRowColor = false;
+      } else if (!hasCream) {
+        streak = 0;
+        if (!/sc around/i.test(raw) || !/\binc\b/i.test(raw)) {
+          prevMidRowColor = false;
+        }
+      }
+    }
+
+    if (inContinuousHead && sawTapestryCue && maxStreak < 6) {
+      issues.push({
+        line: lines.length,
+        text: "",
+        message:
+          "TRANSITION MASK VERTICALITY: cream tapestry block only lasted " +
+          maxStreak +
+          " round(s); need at least 6 continuous vertical rounds.",
+        maxStreak: maxStreak,
+      });
+    }
+
+    return { ok: issues.length === 0, issues: issues };
+  }
+
+  /**
    * Yarn/hook scale profile for max-stitch caps on ~10" toys.
    */
   function yarnScaleProfile(yarnWeight, yarnType, heightIn) {
@@ -907,6 +1015,7 @@
     auditFlatFoldClosures: auditFlatFoldClosures,
     auditFoundationChainOval: auditFoundationChainOval,
     auditOvalScalingInstruction: auditOvalScalingInstruction,
+    auditTapestryMaskVerticality: auditTapestryMaskVerticality,
     expandAbsoluteRepeats: expandAbsoluteRepeats,
     enforceRowStepValidation: enforceRowStepValidation,
     yarnScaleProfile: yarnScaleProfile,

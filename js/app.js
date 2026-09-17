@@ -826,7 +826,12 @@
       const foldAudit = window.AmigurumiPatternMath.auditFlatFoldClosures
         ? window.AmigurumiPatternMath.auditFlatFoldClosures(result.text)
         : { ok: true, issues: [] };
-      const issues = (audit.issues || []).concat(foldAudit.issues || []);
+      const maskAudit = window.AmigurumiPatternMath.auditTapestryMaskVerticality
+        ? window.AmigurumiPatternMath.auditTapestryMaskVerticality(result.text)
+        : { ok: true, issues: [] };
+      const issues = (audit.issues || [])
+        .concat(foldAudit.issues || [])
+        .concat(maskAudit.issues || []);
       const combined = { ok: issues.length === 0, issues: issues };
       if (!combined.ok && issues.length) {
         const note = [

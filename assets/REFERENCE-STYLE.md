@@ -83,7 +83,7 @@ If a new animal is added, match the closest family construction **and** this det
 
 - **Face (`facialConstructionStyle`):**
   - **SEPARATE_PATCH (default):** solid sphere head + separate cream oval muzzle (HARD COALESCENCE), sew between the eyes. No mid-row color switches.
-  - **CONTINUOUS_NOSE_FIRST (toggle):** cream snout→head one piece; tapestry jaw bridge mid-round; expand ≤ +6–8 sts/round; no hourglass.
+  - **CONTINUOUS_NOSE_FIRST (toggle):** cream snout→head one piece; **TAPESTRY COLOR RETENTION** — after mid-row color changes, expansion rounds must split incs across Main+Cream (never unified-color `(sc N, inc) x6`); canned 24→36 retention block (R8–15) when max is 36; ≥6 vertical cream mask rounds; no hourglass.
 - **Arms:** narrow tubes (8–10 sts), fold-close; sew close together on upper chest, paws angled inward (shell accessory).
 - **Feet:** wide flat paddle from oval sole; short walls (≤6–8 rounds total); fold-close so paddles face up/forward on the body base.
 - **Tail:** thick tapered cone tip→base (~half body width at base) — backrest support for the floppy body.
