@@ -22,8 +22,14 @@ Also honor owned style families in `aadam-pattern-styles.mdc` and `assets/REFERE
 
 ## 2. Structural physics (no pancakes)
 
-- After reaching max width on heads/bodies, include **at least 3–6** plain `sc around` rounds (scale with max width and RPI) before decreasing.
-- Chubby/pear belly: cluster decreases toward the **front** when shaping a stomach; do not always space −6 evenly if the owned ref or “chubby” accent asks for a bulge.
+**Depth Profile Guardrail** — after max width, plain `sc around` before decreasing:
+- Max ≤ 18 sts → 2–3 even rounds
+- Max 24–36 sts → 4–6 even rounds
+- Max ≥ 42 sts → 6–8 even rounds
+
+Use `minVolumeEvenRounds` in `patternMath.js`. Print each even round on its own line (no `5-10. sc around` ranges). End counts as `(N sts)`.
+
+- Chubby/pear belly: cluster decreases toward the **front** when shaping a stomach; do not always space decreases evenly if the owned ref or “chubby” accent asks for a bulge.
 - Sitting/JAYG bodies: belly even rounds must reflect **height × RPI**, not a fixed “2 rounds” copied from a chenille PDF when the user is on worsted.
 
 ## 3. Yarn configuration & scale coupling
@@ -45,18 +51,16 @@ When a pattern flattens a 3D tube and crochets through both layers to close it:
 
 Use `flatFoldPlan()` in `js/shapes.js`. Do not invent “about half.”
 
-## 5. Rule B — Oval foundation (CRITICAL)
+## 5. Rule B — Symmetrical foundation oval (CRITICAL)
 
-Verified cat sole R1 (scale 1):
+Straight side length = **(Ch − 2)** on **both** passes (same linear count). Tip curves only: `3 sc in the last ch` / `3 sc in the first ch`.
 
-`Ch 6. Starting in 2nd ch from hook: 4 sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: 3 sc, inc (12)`
+Example Ch 6 → `(14 sts)`:
+`Ch 6. Starting in 2nd ch from hook: 4 sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: 4 sc, 3 sc in the first ch (14 sts)`
 
-Rules:
+**Linear Expansion Constraint:** later oval rounds must keep that straight-side count **constant**. Increases cluster only at the two curved radiuses (via `planOvalRadiusInc` / `symmetricOvalFromChain`). Forbidden: growing side sc from 4→7→10 between rounds.
 
-1. Linear sc before a tip **≤ (X − 2)** for Ch X.
-2. Prefer this asymmetric tip form (3 sc / inc) when it yields a clean integer total — do **not** pad with commentary.
-3. Later increase rounds must consume the previous total exactly.
-4. Use `symmetricOvalFromChain()`; compiler runs `auditFoundationChainOval`.
+Use `symmetricOvalFromChain()`; compiler audits equal sides = ch−2.
 
 ## 5b. Limb integration orientation (sitting JAYG)
 

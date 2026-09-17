@@ -81,9 +81,9 @@
     const between = prev / m - 1;
     const next = prev + m;
     let instruction;
-    if (between <= 0) instruction = "inc x" + m + " (" + next + ")";
-    else if (between === 1) instruction = "(sc, inc) x" + m + " (" + next + ")";
-    else instruction = "(sc " + between + ", inc) x" + m + " (" + next + ")";
+    if (between <= 0) instruction = "inc x" + m + " " + stsCount(next);
+    else if (between === 1) instruction = "(sc, inc) x" + m + " " + stsCount(next);
+    else instruction = "(sc " + between + ", inc) x" + m + " " + stsCount(next);
     return {
       prev: prev,
       multiplier: m,
@@ -111,15 +111,15 @@
           multiplier: 1,
           between: prev - 2,
           next: prev - 1,
-          instruction: Math.max(0, prev - 2) + " sc, dec (" + (prev - 1) + ")",
+          instruction: Math.max(0, prev - 2) + " sc, dec " + stsCount(prev - 1),
         };
       }
       const instr =
         b2 <= 0
-          ? "dec x" + m2 + " (" + n2 + ")"
+          ? "dec x" + m2 + " " + stsCount(n2)
           : b2 === 1
-            ? "(sc, dec) x" + m2 + " (" + n2 + ")"
-            : "(sc " + b2 + ", dec) x" + m2 + " (" + n2 + ")";
+            ? "(sc, dec) x" + m2 + " " + stsCount(n2)
+            : "(sc " + b2 + ", dec) x" + m2 + " " + stsCount(n2);
       return {
         prev: prev,
         multiplier: m2,
@@ -128,9 +128,9 @@
         instruction: instr,
       };
     }
-    if (between === 0) instruction = "dec x" + m + " (" + next + ")";
-    else if (between === 1) instruction = "(sc, dec) x" + m + " (" + next + ")";
-    else instruction = "(sc " + between + ", dec) x" + m + " (" + next + ")";
+    if (between === 0) instruction = "dec x" + m + " " + stsCount(next);
+    else if (between === 1) instruction = "(sc, dec) x" + m + " " + stsCount(next);
+    else instruction = "(sc " + between + ", dec) x" + m + " " + stsCount(next);
     return {
       prev: prev,
       multiplier: m,
@@ -146,35 +146,35 @@
       return planIncAround(scBetween).instruction;
     }
     // Legacy x6 form — only valid when previous = 6*(scBetween+1)
-    if (scBetween <= 0) return "inc x6 (" + next + ")";
-    if (scBetween === 1) return "(sc, inc) x6 (" + next + ")";
-    return "(sc " + scBetween + ", inc) x6 (" + next + ")";
+    if (scBetween <= 0) return "inc x6 " + stsCount(next);
+    if (scBetween === 1) return "(sc, inc) x6 " + stsCount(next);
+    return "(sc " + scBetween + ", inc) x6 " + stsCount(next);
   }
 
   function scDecAround(scBetween, next) {
     if (arguments.length < 2) {
       return planDecAround(scBetween).instruction;
     }
-    if (scBetween <= 0) return "dec x6 (" + next + ")";
-    if (scBetween === 1) return "(sc, dec) x6 (" + next + ")";
-    return "(sc " + scBetween + ", dec) x6 (" + next + ")";
+    if (scBetween <= 0) return "dec x6 " + stsCount(next);
+    if (scBetween === 1) return "(sc, dec) x6 " + stsCount(next);
+    return "(sc " + scBetween + ", dec) x6 " + stsCount(next);
+  }
+
+  function stsCount(n) {
+    return "(" + n + " sts)";
   }
 
   function evenRoundsLine(startRound, count, stitches) {
+    // Structural scannability: one numbered round per line (no "5-10. sc around")
+    if (count <= 0) return "";
     if (count <= 1) {
-      return startRound + ". sc around (" + stitches + ")";
+      return startRound + ". sc around " + stsCount(stitches);
     }
-    const end = startRound + count - 1;
-    return (
-      startRound +
-      "-" +
-      end +
-      ". sc around (" +
-      count +
-      " rounds) (" +
-      stitches +
-      ")"
-    );
+    const parts = [];
+    for (let i = 0; i < count; i += 1) {
+      parts.push(startRound + i + ". sc around " + stsCount(stitches));
+    }
+    return parts.join("\n");
   }
 
   /**
@@ -189,9 +189,8 @@
       // One dec (2 sts → 1) + (sts-2) sc uses all sts and yields even next
       prepLine =
         Math.max(0, sts - 2) +
-        " sc, dec (" +
-        next +
-        ")";
+        " sc, dec " +
+        stsCount(next);
       sts = next;
     }
     return {
@@ -202,71 +201,101 @@
   }
 
   /**
-   * Rule B — oval sole from a foundation chain.
-   * R1 uses verified crochet geometry (no math commentary in the instruction).
-   * Default Ch 6 → 12 sts form: 4 sc, 3 sc in last, 3 sc return, inc.
+   * Oval tip increase with CONSTANT straight-side length (Linear Expansion Constraint).
+   * Increases cluster only at the two curved radiuses — never grow the side sc count.
    */
-  function symmetricOvalFromChain(chLen) {
-    let ch = Math.max(5, Math.round(chLen));
-    // Prefer even chain length so (ch−2)/(ch−3) tip form stays clean
-    if (ch < 6) ch = 6;
-
-    const firstPass = ch - 2; // ≤ ch−2 (exact max)
-    const returnPass = ch - 3; // opposite side before tip inc
-    if (firstPass > ch - 2 || returnPass > ch - 2) {
-      throw new Error("Oval foundation: linear side exceeds ch−2");
+  function planOvalRadiusInc(tipSts, side, tipIncs) {
+    const tip = Math.max(1, Math.round(tipSts));
+    const S = Math.max(1, Math.round(side));
+    let add = tipIncs != null ? tipIncs : 3;
+    if (tip < add) add = tip;
+    // Prefer add that divides tip so spacing is even
+    while (add > 1 && tip % add !== 0) add -= 1;
+    const between = tip / add - 1;
+    let tipBody;
+    if (between <= 0) {
+      tipBody = add === 3 ? "3 inc" : add + " inc";
+    } else {
+      const chunks = [];
+      for (let i = 0; i < add; i += 1) {
+        chunks.push("inc");
+        if (between === 1) chunks.push("sc");
+        else chunks.push(between + " sc");
+      }
+      tipBody = chunks.join(", ");
     }
-    // Produce: firstPass + 3 + returnPass + 2 (inc) = 2*ch
-    const r1 = firstPass + 3 + returnPass + 2;
+    const consume = 2 * (tip + S);
+    const produce = 2 * (tip + add + S);
+    return {
+      tipSts: tip,
+      side: S,
+      tipIncs: add,
+      tipNext: tip + add,
+      consume: consume,
+      produce: produce,
+      instruction:
+        "(" + tipBody + ", " + S + " sc) x2 " + stsCount(produce),
+    };
+  }
+
+  /**
+   * Rule B — symmetrical foundation oval + tip-only expansion.
+   * Straight side length = (Ch − 2) on BOTH passes; that side count stays fixed
+   * while later rounds only add stitches at the curved radiuses.
+   */
+  function symmetricOvalFromChain(chLen, options) {
+    options = options || {};
+    let ch = Math.max(4, Math.round(chLen));
+    const expandRounds =
+      options.expandRounds != null ? Math.max(0, options.expandRounds) : 3;
+    const side = ch - 2; // Axis Formula — both passes
+    // R1: side sc, 3 sc in last, side sc, 3 sc in first
+    const tip0 = 3;
+    const r1 = side + tip0 + side + tip0;
     const rounds = [];
 
     rounds.push({
       produce: r1,
       consume: 0,
       ch: ch,
-      firstPassLoops: firstPass,
-      returnPassLoops: returnPass,
+      firstPassLoops: side,
+      returnPassLoops: side,
+      side: side,
+      tipSts: tip0,
       instruction:
         "Ch " +
         ch +
         ". Starting in 2nd ch from hook: " +
-        firstPass +
+        side +
         " sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: " +
-        returnPass +
-        " sc, inc (" +
-        r1 +
-        ")",
+        side +
+        " sc, 3 sc in the first ch " +
+        stsCount(r1),
     });
 
-    // R2–R4: +6 each on the tip radiuses (consume prior total exactly)
-    const side2 = Math.floor((r1 - 6) / 2); // for r1=12 → side 3
-    const r2 = r1 + 6;
-    rounds.push({
-      produce: r2,
-      consume: r1,
-      instruction: "(3 inc, " + side2 + " sc) x2 (" + r2 + ")",
-    });
-    const side3 = side2 + 3;
-    const r3 = r2 + 6;
-    rounds.push({
-      produce: r3,
-      consume: r2,
-      instruction: "(3 inc, " + side3 + " sc) x2 (" + r3 + ")",
-    });
-    const side4 = side2 + 6;
-    const r4 = r3 + 6;
-    rounds.push({
-      produce: r4,
-      consume: r3,
-      instruction: "(3 inc, " + side4 + " sc) x2 (" + r4 + ")",
-    });
+    let tip = tip0;
+    let prev = r1;
+    for (let e = 0; e < expandRounds; e += 1) {
+      const step = planOvalRadiusInc(tip, side, 3);
+      rounds.push({
+        produce: step.produce,
+        consume: step.consume,
+        side: side,
+        tipSts: tip,
+        tipNext: step.tipNext,
+        instruction: step.instruction,
+      });
+      tip = step.tipNext;
+      prev = step.produce;
+    }
 
     return {
       ch: ch,
-      side: side2,
-      firstPassLoops: firstPass,
-      returnPassLoops: returnPass,
-      soleMax: r4,
+      side: side,
+      firstPassLoops: side,
+      returnPassLoops: side,
+      soleMax: prev,
+      tipSts: tip,
       rounds: rounds,
     };
   }
@@ -3921,29 +3950,30 @@
 
   /**
    * Small foundation oval for sew-on patches (Ch 4–6).
-   * Same tip form as Rule B; allows shorter chains than sole ovals.
+   * Equal straight sides = (Ch − 2); tip-only curves.
    */
   function flatOvalPatchFromChain(chLen) {
     let ch = Math.max(4, Math.round(chLen || 5));
-    if (ch > 6) ch = 6;
-    const firstPass = ch - 2;
-    const returnPass = Math.max(1, ch - 3);
-    const r1 = firstPass + 3 + returnPass + 2;
+    if (ch > 8) ch = 8;
+    const side = ch - 2;
+    const tip = 3;
+    const r1 = side + tip + side + tip;
     return {
       ch: ch,
-      firstPassLoops: firstPass,
-      returnPassLoops: returnPass,
+      firstPassLoops: side,
+      returnPassLoops: side,
+      side: side,
+      tipSts: tip,
       produce: r1,
       instruction:
         "Ch " +
         ch +
         ". Starting in 2nd ch from hook: " +
-        firstPass +
+        side +
         " sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: " +
-        returnPass +
-        " sc, inc (" +
-        r1 +
-        ")",
+        side +
+        " sc, 3 sc in the first ch " +
+        stsCount(r1),
     };
   }
 
@@ -4042,31 +4072,17 @@
     r = 1;
     lines.push(r + ". " + oval.instruction);
 
-    // R2: tip increases (+4) so consume matches and patch stays oval
+    // R2: tip-only increases; straight side stays (ch − 2)
     r = 2;
-    const r2 = stitches + 4;
-    const sideExact = stitches / 2 - 2;
-    if (stitches % 2 === 0 && sideExact >= 1) {
-      lines.push(
-        r + ". (2 inc, " + sideExact + " sc) x2 (" + r2 + ")"
-      );
-      stitches = r2;
-    } else {
-      lines.push(
-        r +
-          ". sc around, placing 4 evenly spaced inc (" +
-          r2 +
-          ")"
-      );
-      stitches = r2;
-    }
+    const tipInc = planOvalRadiusInc(oval.tipSts || 3, oval.side, 3);
+    lines.push(r + ". " + tipInc.instruction);
+    stitches = tipInc.produce;
 
     r = 3;
-    lines.push(r + ". sc around (" + stitches + ")");
+    lines.push(r + ". sc around " + stsCount(stitches));
 
-    // Optional 4th round for a slightly deeper patch
     r = 4;
-    lines.push(r + ". sc around (" + stitches + ")");
+    lines.push(r + ". sc around " + stsCount(stitches));
 
     lines.push(
       "Lightly stuff. Fasten off, leaving a long sewing tail. Keep the patch flat — do not close to a point."
@@ -4178,33 +4194,25 @@
     );
     lines.push("");
 
-    // Use first 2–3 oval rounds for a dramatic flat sole, then short walls
+    // Use first 2–3 oval rounds (constant straight sides), then short walls
     const soleRounds = Math.min(3, oval.rounds.length);
+    let tipNow = oval.rounds[soleRounds - 1].tipNext || oval.rounds[soleRounds - 1].tipSts || 3;
     for (let i = 0; i < soleRounds; i += 1) {
       r += 1;
       lines.push(r + ". " + oval.rounds[i].instruction);
       stitches = oval.rounds[i].produce;
+      if (oval.rounds[i].tipNext != null) tipNow = oval.rounds[i].tipNext;
     }
 
-    // One more widen if we still have round budget
+    // One more tip-only widen if round budget allows (side stays fixed)
     let used = soleRounds;
-    if (used < totalBudget - 2 && stitches % 2 === 0) {
+    if (used < totalBudget - 2) {
       r += 1;
       used += 1;
-      const next = stitches + 4;
-      const side = stitches / 2 - 2;
-      if (side >= 1) {
-        lines.push(r + ". (2 inc, " + side + " sc) x2 (" + next + ")");
-        stitches = next;
-      } else {
-        lines.push(
-          r +
-            ". sc around, placing 4 evenly spaced inc (" +
-            next +
-            ")"
-        );
-        stitches = next;
-      }
+      const step = planOvalRadiusInc(tipNow, oval.side, 3);
+      lines.push(r + ". " + step.instruction);
+      stitches = step.produce;
+      tipNow = step.tipNext;
     }
 
     const wallRounds = Math.max(2, totalBudget - used - 1);
@@ -4260,34 +4268,41 @@
     );
     lines.push("");
     r = 1;
-    lines.push(r + ". 6 sc in MR (6)");
+    lines.push(r + ". 6 sc in MR " + stsCount(6));
     stitches = 6;
 
     let sinceInc = 0;
-    const gap = 2; // increase every 2–3 rows
-    while (stitches < baseTarget && r < totalRounds + 6) {
+    const gap = 2; // +2 stitches every 2–3 rounds
+    while (stitches < baseTarget && r < totalRounds + 8) {
       r += 1;
       sinceInc += 1;
       if (sinceInc >= gap && stitches < baseTarget) {
-        const inc = planIncAround(stitches);
-        if (inc.next > baseTarget) {
-          const add = baseTarget - stitches;
+        const add = Math.min(2, baseTarget - stitches);
+        const next = stitches + add;
+        if (add === 2 && stitches % 2 === 0) {
+          const between = stitches / 2 - 1;
+          if (between <= 0) {
+            lines.push(r + ". inc x2 " + stsCount(next));
+          } else if (between === 1) {
+            lines.push(r + ". (sc, inc) x2 " + stsCount(next));
+          } else {
+            lines.push(
+              r + ". (sc " + between + ", inc) x2 " + stsCount(next)
+            );
+          }
+        } else {
           lines.push(
             r +
               ". sc around, placing " +
               add +
-              " evenly spaced inc (" +
-              baseTarget +
-              ")"
+              " evenly spaced inc " +
+              stsCount(next)
           );
-          stitches = baseTarget;
-        } else {
-          lines.push(r + ". " + inc.instruction);
-          stitches = inc.next;
         }
+        stitches = next;
         sinceInc = 0;
       } else {
-        lines.push(r + ". sc around (" + stitches + ")");
+        lines.push(r + ". sc around " + stsCount(stitches));
       }
     }
 

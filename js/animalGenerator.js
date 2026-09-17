@@ -95,7 +95,7 @@
         includesAny(name, ["otter"])
       ) {
         notes.push(
-          "For otters (chibi floppy water mammal): solid sphere head + SEPARATE cream oval muzzle (sew-on); narrow fold-close arms on the upper chest angled inward; wide flat paddle feet sew-on at the lower base facing up/forward; thick tapered tail as a backrest. Do not use a continuous snout-to-head piece."
+          "For chibi floppy water mammals (otter/beaver/seal): solid sphere head + SEPARATE cream oval muzzle (sew-on); narrow fold-close arms on the upper chest angled inward; wide flat paddle feet sew-on at the lower base facing up/forward; thick tapered tail as a backrest. Do not use a continuous snout-to-head piece."
         );
       } else if (f.longEars || includesAny(name, ["bunny", "rabbit", "hare"])) {
         notes.push(
@@ -393,8 +393,17 @@
       features.sitting = true;
       plan = "sitting";
     }
-    // Chibi floppy water mammal (otter): separate muzzle, paddle feet, thick tail backrest
-    if (includesAny(name, ["otter", "sea otter", "river otter"])) {
+    // Chibi floppy water mammal (otter/beaver/seal)
+    if (
+      includesAny(name, [
+        "otter",
+        "sea otter",
+        "river otter",
+        "beaver",
+        "seal",
+        "sea lion",
+      ])
+    ) {
       features.sitting = true;
       features.shortSnout = true;
       features.floppyWaterMammal = true;
@@ -831,7 +840,12 @@
     ]);
     const isOtter =
       analysis.features.floppyWaterMammal ||
-      includesAny(analysis.name.toLowerCase(), ["otter"]);
+      includesAny(analysis.name.toLowerCase(), [
+        "otter",
+        "beaver",
+        "seal",
+        "sea lion",
+      ]);
     const bunnyStyle =
       f.longEars ||
       includesAny(analysis.name.toLowerCase(), ["bunny", "rabbit", "hare"]);
@@ -1525,7 +1539,7 @@
                 H.toFixed(1) +
                 '" tall — head+body one piece, JAYG feet/tail, sew-on arms, fur ears.'
               : isOtter
-                ? "Chibi floppy otter: ~" +
+                ? "Chibi floppy water mammal: ~" +
                   headD.toFixed(1) +
                   '" sphere head on ' +
                   H.toFixed(1) +

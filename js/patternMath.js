@@ -233,22 +233,31 @@
     const maxLinear = ch - 2;
     const issues = [];
 
-    // Preferred form: "Starting in 2nd ch from hook: N sc, 3 sc in the last ch. ... : M sc, inc"
+    // Symmetrical form: both passes = (ch − 2), tips are 3 sc in last / 3 sc in first
     let first = null;
     let ret = null;
-    const preferred = text.match(
-      /2nd ch from hook:\s*(\d+)\s*sc,\s*3 sc in the last ch[\s\S]*?foundation chain:\s*(\d+)\s*sc,\s*inc/i
+    const symmetric = text.match(
+      /2nd ch from hook:\s*(\d+)\s*sc,\s*3 sc in the last ch[\s\S]*?foundation chain:\s*(\d+)\s*sc,\s*3 sc in the first/i
     );
-    if (preferred) {
-      first = parseInt(preferred[1], 10);
-      ret = parseInt(preferred[2], 10);
+    if (symmetric) {
+      first = parseInt(symmetric[1], 10);
+      ret = parseInt(symmetric[2], 10);
     } else {
-      const legacy = text.match(
-        /2nd ch from hook:\s*(\d+)\s*sc[\s\S]*?,\s*(\d+)\s*sc along/i
+      // Legacy asymmetric: return side + inc
+      const preferred = text.match(
+        /2nd ch from hook:\s*(\d+)\s*sc,\s*3 sc in the last ch[\s\S]*?foundation chain:\s*(\d+)\s*sc,\s*inc/i
       );
-      if (legacy) {
-        first = parseInt(legacy[1], 10);
-        ret = parseInt(legacy[2], 10);
+      if (preferred) {
+        first = parseInt(preferred[1], 10);
+        ret = parseInt(preferred[2], 10);
+      } else {
+        const legacy = text.match(
+          /2nd ch from hook:\s*(\d+)\s*sc[\s\S]*?,\s*(\d+)\s*sc along/i
+        );
+        if (legacy) {
+          first = parseInt(legacy[1], 10);
+          ret = parseInt(legacy[2], 10);
+        }
       }
     }
 
@@ -266,6 +275,26 @@
     if (ret > maxLinear) {
       issues.push(
         "Return-pass linear sc (" + ret + ") exceeds ch−2 (" + maxLinear + ")."
+      );
+    }
+    // Symmetrical axis: both straight sides should equal (ch − 2)
+    if (first !== ret) {
+      issues.push(
+        "Straight sides must match (got " +
+          first +
+          " and " +
+          ret +
+          "); both should be ch−2 (" +
+          maxLinear +
+          ")."
+      );
+    } else if (first !== maxLinear) {
+      issues.push(
+        "Straight side length should be ch−2 (" +
+          maxLinear +
+          "), got " +
+          first +
+          "."
       );
     }
     return {
@@ -647,12 +676,24 @@
     return Math.max(step, Math.round(n / step) * step);
   }
 
-  /** Minimum even rounds at max width (anti-pancake). */
+  /** Minimum even rounds at max width (Depth Profile Guardrail). */
   function minVolumeEvenRounds(maxStitches, rpi, minFloor) {
-    const floor = minFloor != null ? minFloor : 3;
-    const fromWidth = Math.max(floor, Math.round(maxStitches / 12));
-    const fromGauge = Math.max(floor, Math.round((rpi || 4) * 0.7));
-    return Math.max(floor, Math.min(8, Math.max(fromWidth, fromGauge)));
+    const n = Math.round(maxStitches || 0);
+    let bracketMin;
+    let bracketMax;
+    if (n <= 18) {
+      bracketMin = 2;
+      bracketMax = 3;
+    } else if (n <= 36) {
+      bracketMin = 4;
+      bracketMax = 6;
+    } else {
+      bracketMin = 6;
+      bracketMax = 8;
+    }
+    const floor = minFloor != null ? minFloor : bracketMin;
+    const fromGauge = Math.max(bracketMin, Math.round((rpi || 4) * 0.85));
+    return Math.max(floor, Math.min(bracketMax, Math.max(bracketMin, fromGauge)));
   }
 
   /**
