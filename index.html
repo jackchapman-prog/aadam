@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amigurumi Pattern Maker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <p class="eyebrow">AADAM</p>
+        <h1>Amigurumi Pattern Maker</h1>
+        <p class="lede">
+        Enter gauge, yarn, and hook. Type an animal. The app sketches it as
+        spheres, cylinders, and cones, then maps those solids to sc / inc / dec
+        rounds — the same notebook math amigurumi designers use.
+        </p>
+      </header>
+
+      <form id="pattern-form" class="form" novalidate>
+        <fieldset>
+          <legend>Your gauge</legend>
+          <div class="field-row">
+            <label>
+              Stitches per inch
+              <input
+                type="number"
+                id="spi"
+                name="spi"
+                min="1"
+                step="0.1"
+                value="4"
+                required
+              />
+            </label>
+            <label>
+              Rounds per inch
+              <input
+                type="number"
+                id="rpi"
+                name="rpi"
+                min="1"
+                step="0.1"
+                value="4.5"
+                required
+              />
+            </label>
+          </div>
+          <p class="hint">
+            These drive the stitch math. Changing yarn weight below also updates
+            these to a typical amigurumi gauge for that yarn (you can override).
+            Pattern refreshes as you type.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Yarn &amp; hook</legend>
+          <div class="field-row">
+            <label>
+              Yarn weight
+              <select id="yarn-weight" name="yarnWeight" required>
+                <option value="lace">0 – Lace</option>
+                <option value="super-fine">1 – Super Fine</option>
+                <option value="fine">2 – Fine</option>
+                <option value="light">3 – Light / DK</option>
+                <option value="medium">4 – Medium / Worsted</option>
+                <option value="bulky" selected>5 – Bulky</option>
+                <option value="super-bulky">6 – Super Bulky</option>
+                <option value="jumbo">7 – Jumbo</option>
+              </select>
+            </label>
+            <label>
+              Yarn type / fiber
+              <select id="yarn-type" name="yarnType" required>
+                <option value="Acrylic">Acrylic</option>
+                <option value="Alpaca">Alpaca</option>
+                <option value="Angora">Angora</option>
+                <option value="Bamboo">Bamboo</option>
+                <option value="Cashmere">Cashmere</option>
+                <option value="Chenille" selected>Chenille</option>
+                <option value="Cotton">Cotton</option>
+                <option value="Hemp">Hemp</option>
+                <option value="Linen">Linen</option>
+                <option value="Merino wool">Merino wool</option>
+                <option value="Mohair">Mohair</option>
+                <option value="Nylon">Nylon</option>
+                <option value="Polyester">Polyester</option>
+                <option value="Rayon / Viscose">Rayon / Viscose</option>
+                <option value="Silk">Silk</option>
+                <option value="Velvet / plush">Velvet / plush</option>
+                <option value="Wool">Wool</option>
+                <option value="Acrylic blend">Acrylic blend</option>
+                <option value="Cotton blend">Cotton blend</option>
+                <option value="Wool blend">Wool blend</option>
+                <option value="Other blend">Other blend</option>
+              </select>
+            </label>
+            <label>
+              Hook size
+              <select id="hook-size" name="hookSize" required>
+                <optgroup label="Steel hooks (lace / thread)">
+                  <option value="14 (0.60 mm)">14 (0.60 mm)</option>
+                  <option value="13 (0.75 mm)">13 (0.75 mm)</option>
+                  <option value="12 (0.85 mm)">12 (0.85 mm)</option>
+                  <option value="11 (1.00 mm)">11 (1.00 mm)</option>
+                  <option value="10 (1.15 mm)">10 (1.15 mm)</option>
+                  <option value="9 (1.25 mm)">9 (1.25 mm)</option>
+                  <option value="8 (1.50 mm)">8 (1.50 mm)</option>
+                  <option value="7 (1.65 mm)">7 (1.65 mm)</option>
+                  <option value="6 (1.80 mm)">6 (1.80 mm)</option>
+                  <option value="5 (1.90 mm)">5 (1.90 mm)</option>
+                  <option value="4 (2.00 mm)">4 (2.00 mm)</option>
+                  <option value="3 (2.10 mm)">3 (2.10 mm)</option>
+                  <option value="2 (2.20 mm)">2 (2.20 mm)</option>
+                  <option value="1 (2.25 mm)">1 (2.25 mm)</option>
+                  <option value="0 (2.55 mm)">0 (2.55 mm)</option>
+                  <option value="00 (2.70 mm)">00 (2.70 mm)</option>
+                </optgroup>
+                <optgroup label="Standard hooks (US / metric)">
+                  <option value="B-1 (2.25 mm)">B-1 (2.25 mm)</option>
+                  <option value="C-2 (2.75 mm)">C-2 (2.75 mm)</option>
+                  <option value="D-3 (3.25 mm)">D-3 (3.25 mm)</option>
+                  <option value="E-4 (3.5 mm)">E-4 (3.5 mm)</option>
+                  <option value="F-5 (3.75 mm)">F-5 (3.75 mm)</option>
+                  <option value="G-6 (4.0 mm)" selected>G-6 (4.0 mm)</option>
+                  <option value="7 (4.5 mm)">7 (4.5 mm)</option>
+                  <option value="H-8 (5.0 mm)">H-8 (5.0 mm)</option>
+                  <option value="I-9 (5.5 mm)">I-9 (5.5 mm)</option>
+                  <option value="J-10 (6.0 mm)">J-10 (6.0 mm)</option>
+                  <option value="K-10.5 (6.5 mm)">K-10.5 (6.5 mm)</option>
+                  <option value="L-11 (8.0 mm)">L-11 (8.0 mm)</option>
+                  <option value="M/N-13 (9.0 mm)">M/N-13 (9.0 mm)</option>
+                  <option value="N/P-15 (10.0 mm)">N/P-15 (10.0 mm)</option>
+                  <option value="P/Q (15.0 mm)">P/Q (15.0 mm)</option>
+                  <option value="Q (16.0 mm)">Q (16.0 mm)</option>
+                  <option value="S (19.0 mm)">S (19.0 mm)</option>
+                </optgroup>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Build style</legend>
+          <div class="field-row">
+            <label>
+              Posture
+              <select id="posture" name="posture">
+                <option value="auto" selected>Auto (from animal)</option>
+                <option value="sitting">Sitting (hips / JAYG)</option>
+                <option value="dangling">Dangling / floppy</option>
+                <option value="quadruped">Standing on all fours</option>
+              </select>
+            </label>
+            <label>
+              Shaping accent
+              <select id="shaping" name="shaping">
+                <option value="auto" selected>Auto (from animal)</option>
+                <option value="chubby">Chubby / pear belly</option>
+                <option value="sculpted-face">Sculpted face (no sew-on snout)</option>
+                <option value="sew-snout">Sew-on snout</option>
+              </select>
+            </label>
+            <label>
+              Assembly
+              <select id="assembly-style" name="assemblyStyle">
+                <option value="jayg" selected>No-sew limbs (join as you go)</option>
+                <option value="partial">Partial sew</option>
+                <option value="sew">Sew-on pieces</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint">
+            These steer construction. “Auto” keeps the owned style for that animal
+            (e.g. Cat → Kitten Kaya sitting + JAYG).
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Animal</legend>
+          <div class="field-row">
+            <label class="grow">
+              Animal name
+              <input
+                type="text"
+                id="animal-name"
+                name="animalName"
+                placeholder="e.g. deer, fox, octopus, dragon…"
+                value="Deer"
+                required
+                autocomplete="off"
+              />
+            </label>
+            <label>
+              Total height (inches)
+              <input
+                type="number"
+                id="total-height"
+                name="totalHeight"
+                min="1"
+                step="0.5"
+                value="10"
+                required
+              />
+            </label>
+          </div>
+          <p class="hint">
+            Type any animal. The app builds pieces the way a crochet artist
+            would for that animal, then sizes them to your height.
+          </p>
+          <div id="quick-picks" class="quick-picks" aria-label="Quick animal picks"></div>
+          <p id="animal-blurb" class="hint"></p>
+          <label class="ref-upload">
+            Optional reference photo
+            <input type="file" id="ref-photo" accept="image/*" />
+          </label>
+          <p class="hint">
+            If the photo clearly shows an animal, the app detects it and adjusts
+            proportions (legs/neck/body/head). Total height in inches still comes
+            from you — photos have no ruler.
+          </p>
+          <p id="ref-status" class="hint ref-status" hidden></p>
+          <div id="ref-preview" class="ref-preview" hidden>
+            <div class="ref-frame">
+              <img id="ref-image" alt="Reference animal photo" />
+              <canvas id="ref-canvas" class="ref-canvas" hidden></canvas>
+            </div>
+            <button type="button" id="ref-clear" class="ghost">Remove photo</button>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="primary">Generate pattern</button>
+      </form>
+
+      <section id="output" class="output" hidden>
+        <div class="output-header">
+          <h2 id="output-title">Pattern</h2>
+          <button type="button" id="copy-btn" class="ghost">Copy</button>
+        </div>
+        <pre id="pattern-text" class="pattern-text"></pre>
+      </section>
+    </main>
+
+    <script src="js/shapes.js?v=engine8"></script>
+    <script src="js/animalGenerator.js?v=engine8"></script>
+    <script src="js/patternMath.js?v=engine8"></script>
+    <script src="js/photoAnalysis.js?v=engine8"></script>
+    <script src="js/app.js?v=engine8"></script>
+  </body>
+</html>

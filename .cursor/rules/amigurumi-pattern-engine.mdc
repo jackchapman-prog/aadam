@@ -1,0 +1,134 @@
+---
+description: Amigurumi Pattern Engine — math, physics, yarn scale, limbs
+alwaysApply: true
+globs: js/**/*.js,index.html,assets/REFERENCE-STYLE.md
+---
+
+# Amigurumi Pattern Engine (AADAM)
+
+You are an expert Amigurumi Pattern Engine. Generate mathematically sound, structurally 3D crochet patterns. When editing `js/shapes.js`, `js/animalGenerator.js`, or `js/app.js`, obey these rules.
+
+Also honor owned style families in `aadam-pattern-styles.mdc` and `assets/REFERENCE-STYLE.md`, except where Rules A–D below require a stricter fix (fold math, oval consume, 3D ears, row validation).
+
+**Runtime scope:** shared helpers (`flatFoldPlan`, `symmetricOvalFromChain`, `sittingHipLegJoinPlan`, `faceShapingRoundPlan`) and `patternMath.js` apply across Cat, Teddy, Hippo, Unicorn/generic sitting, Chinchilla, and sculpted heads — not Cat-only. Family-specific construction (Harry leg-bridge, Molly joints, deer dangling, chinchilla flat ears) stays, but fold/oval/JAYG/consume math must still pass.
+
+## 1. Mathematical stack (critical)
+
+- **CRITICAL MULTIPLIER COUPLING:** When expanding or contracting (inc/dec repeats), the repeat multiplier (`x6`, `x8`, …) **MUST** be a factor of the previous round’s stitch count (`prev % N === 0`). Example: previous = 32 → only `x8`/`x4`/`x2` (e.g. `(sc 3, inc) x8 (40)`). **Forbidden:** `x6` on a total not divisible by 6.
+- Prefer classic `x6` when `prev % 6 === 0`; otherwise pick the largest preferred factor via `chooseRepeatMultiplier` / `planIncAround` / `planDecAround` in `js/shapes.js`. Never hard-code `stitches / 6` for the multiplier.
+- `patternMath.js` audits this: any `(…) xN` / `inc xN` / `dec xN` where `prev % N !== 0` fails.
+- Every round line ends with the stitch count: `(XX)` or `(XX sts)`.
+- Prefer forms like `(sc N, inc) xM (next)` where `previous = M × (N + 1)` and `next = previous + M` (for increases).
+
+## 2. Structural physics (no pancakes)
+
+- After reaching max width on heads/bodies, include **at least 3–6** plain `sc around` rounds (scale with max width and RPI) before decreasing.
+- Chubby/pear belly: cluster decreases toward the **front** when shaping a stomach; do not always space −6 evenly if the owned ref or “chubby” accent asks for a bulge.
+- Sitting/JAYG bodies: belly even rounds must reflect **height × RPI**, not a fixed “2 rounds” copied from a chenille PDF when the user is on worsted.
+
+## 3. Yarn configuration & scale coupling
+
+- Couple stitch/row maximums to yarn + hook + SPI/RPI.
+- **Worsted (~3.5 mm hook):** ~10" plush often needs max width about **42–48** sts (at matching SPI).
+- **Plush chenille/velvet (4–5 mm):** restrict max width — about **30–36** sts for a ~10" toy so it does not balloon.
+- For chenille/velvet: prefer **ch 2, work N sc in 2nd ch** (or loose MR) notes where magic rings snap; keep the same stitch total as MR.
+
+## 4. Rule A — Flat-fold limb constraint (CRITICAL)
+
+When a pattern flattens a 3D tube and crochets through both layers to close it:
+
+1. The **last round before folding must be an even stitch count**.
+2. If that round is odd, add an explicit decrease so the count becomes even **before** folding.
+3. Fold-closure stitch count **MUST equal exactly half** of that final even round  
+   (e.g. last round 16 → fold with exactly **8 sc** through both layers).
+4. The body round that JAYG-integrates the limb must use **that same closure count**.
+
+Use `flatFoldPlan()` in `js/shapes.js`. Do not invent “about half.”
+
+## 5. Rule B — Oval foundation (CRITICAL)
+
+Verified cat sole R1 (scale 1):
+
+`Ch 6. Starting in 2nd ch from hook: 4 sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: 3 sc, inc (12)`
+
+Rules:
+
+1. Linear sc before a tip **≤ (X − 2)** for Ch X.
+2. Prefer this asymmetric tip form (3 sc / inc) when it yields a clean integer total — do **not** pad with commentary.
+3. Later increase rounds must consume the previous total exactly.
+4. Use `symmetricOvalFromChain()`; compiler runs `auditFoundationChainOval`.
+
+## 5b. Limb integration orientation (sitting JAYG)
+
+When attaching legs on a sitting body row of Total_Sts:
+
+- Legs on the **hips**; wider gap at the **back**, medium gap at the **front**.
+- Identity: `Back_Gap + Leg_A + Front_Gap + Leg_B = Total_Sts`.
+- Canonical 36-st / 8-st legs: `12 sc, 8 sc with leg, 8 sc, 8 sc with leg (36)`.
+
+Use `sittingHipLegJoinPlan()`. Placement may be a **separate** sentence after the round — never equations inside the round line.
+
+## 5c. Chain-bridge leg join mandate (CRITICAL)
+
+When joining two limbs with a **chain bridge** to start a body (Harry hippo style):
+
+- `Total_Body_Sts = (Limbs_Final_Round_Sts × 2) + (Chain_Bridge_Count × 2)`.
+- Work **every** stitch of each limb’s final round — **forbidden** to leave limb stitches unworked.
+- Example: legs end on 16, bridge ch 2 → body R1 = `16×2 + 2×2 = 36`.
+
+Use `chainBridgeJoinPlan(limbFinalSts, chainBridge)`. Pass the leg’s **full last-round count** (`joinStitches`), not the fold-half count.
+
+## 5d. Profile transition constraint — continuous snouts (CRITICAL)
+
+When a muzzle/snout is **one continuous piece** with the head:
+
+- Row counts must form a **continuous geometric slope**.
+- **Never** decrease down to a narrow “neck” size and then increase back up to head size in the same unit (hourglass defect).
+- Muzzle → head: **maintain width** or use **gradual increases only**.
+
+Applies to hippo muzzle-head and any similar one-piece face construction.
+
+## 6. Rule C — 3D cone ear mandate
+
+- **Never** generate animal ears with flat turning rows **unless the user explicitly requests flat ears**.
+- Default: **3D spiral cones** from MR, +3 or +6 per round.
+
+## 6b. CRITICAL — Compiler sanitization (no math hallucination)
+
+- **FORBIDDEN** inside crochet instruction lines: math notes, validation variables, rule names, or commentary such as `(first pass, ≤ ch−2)`, `exactly half of 16`, `Rule A`, `Back 12 + Leg 8 = 36`.
+- Numbered rounds must use **only** standard crochet nomenclature: sc, inc, dec, ch, MR, blo, around, and plain join phrases (`sc with leg`).
+- If an internal check fails, **change the stitch/chain integers** until the math balances. Do **not** explain the failure in the pattern text.
+- Optional placement tips (`Mark the muzzle center`) are fine as separate lines — they must not fake stitch counts.
+
+## 7. Rule D — Row step + absolute repeat expansion (compiler)
+
+Before showing pattern text in the UI, run `js/patternMath.js`:
+
+For every numbered round after the start:
+
+- Expand every `(… ) xN` into base costs: `sc`/`inc` = 1 from prior round, `dec` = 2.
+- Example: `(1 sc, inc) x3` → (1+1)×3 = **6** base stitches used.
+- **Assert:** base stitches used == Previous_Round_Total (integer only; no rounding).
+- Also assert the printed `(N)` equals stitches produced.
+- If assert fails: recalculate modifiers / printed totals before printing.
+
+Also run Rule A fold audit and foundation-chain oval audit.
+
+## 8. Limb assembly (other)
+
+- Prefer **no-sew / JAYG**: fold limb flat, work through both layers into a named body round with exact stitch counts.
+- Symmetry: for a torso of N sts, `2 × limbJoin + frontGap + backGap = N`. Wide sitting: front belly gap **≥ 8–10** sts so legs sit on the outer hips.
+
+## 9. Execution protocol
+
+- Generate part-by-part (ears → limbs → body → head → assembly).
+- Never leave critical shaping as “as needed” — give exact counts.
+
+## UI variables the engine expects
+
+- Target height/length (inches)
+- Yarn weight + fiber + hook (drives SPI/RPI defaults and max-stitch caps)
+- Posture: sitting / standing quadruped / dangling-floppy
+- Shaping accents: chubby belly, sew-on snout vs sculpted face, etc.
+- Assembly: no-sew (JAYG), partial sew, or all sew-on
+- Ear style: 3D cone (default) / flat (explicit only)

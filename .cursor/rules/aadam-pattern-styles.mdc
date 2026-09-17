@@ -1,0 +1,40 @@
+---
+description: AADAM pattern style — use Jack's owned reference PDFs only
+alwaysApply: true
+---
+
+# AADAM pattern styles (owned references)
+
+Jack owns the reference patterns in `assets/`. When creating or changing animal patterns in AADAM, **use these styles** — not generic standing-quadruped templates unless the animal clearly matches a different family already in the app (e.g. fox).
+
+## Read first
+
+Full construction notes: `assets/REFERENCE-STYLE.md`  
+Extracted text: `assets/*.txt` next to each PDF
+
+## Style families (current set)
+
+| Family | Files | Pose / build |
+| --- | --- | --- |
+| Kitten | `KittenKaya.pdf` | Sitting; JAYG limbs; **3D cone ears** (Rule C; flat only if requested); sculpted head; thin tube tail |
+| Teddy | `PatternTeddyBear.pdf` | Sitting; JAYG limbs; sew-on snout; folded dome ears; round MR feet; tiny ball tail |
+| Unicorn | `PatternMollytheUnicorn.pdf` | Sitting; jointed/sewn hoof limbs; sculpted head; thin horn; spiral mane & tail |
+| Hippo | `PatternHippoHarry.pdf` | Sitting; chain-oval muzzle→head one piece; legs continue into body; JAYG arms; chain tail |
+| Chinchilla | `PatternChinchilla.pdf` | Sitting; head+body one piece; JAYG feet & fur tail; sew-on arms; fur-edged ears |
+| Deer | `reference-deer.webp` | Dangling chibi; pear body; 2 arms + 2 legs; sew-on muzzle; antlers |
+
+## Rules when Jack asks for a pattern
+
+1. Pick the **closest family** above (or the exact animal if it already has a path).
+2. Match that family’s piece list, join order, head/face method, and proportions.
+3. Scale with the user’s SPI/RPI and total height.
+4. **Detail bar:** every pattern must read like Kaya/Harry — exact rounds, placement cues, stuffing notes, precise joins, clean assembly. Not a vague template.
+5. Prefer chenille/sitting-plush look: large head (~35–45% height), no long neck tube, no four stilts under a horizontal body — unless the animal is intentionally a standing quadruped (fox, horse, etc.).
+6. When Jack adds a new owned PDF later: copy to `assets/`, extract `.txt`, update `REFERENCE-STYLE.md`, and wire that animal’s generator path.
+
+## Do not
+
+- Default every land mammal to standing deer/horse stilts.
+- Invent a new construction style when an owned family already fits.
+- Ignore `assets/REFERENCE-STYLE.md` when editing `js/animalGenerator.js` or `js/shapes.js`.
+- Rely on animal **name alone** for new/ambiguous species — prefer an explicit **Style family** UI choice (Auto + the six families above) so “rabbit” does not silently become stilts or the wrong head method.
