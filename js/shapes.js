@@ -201,6 +201,51 @@
   }
 
   /**
+   * HARD COALESCENCE BASE CHECK (OVALS).
+   * Target R1 totals map to fixed chain instructions — never stretch a short chain.
+   * Expansion straight-side S = return pass = ch − 3 (after classic tip form).
+   */
+  function ovalFoundationCoalescence(targetOrCh) {
+    const table = {
+      10: {
+        ch: 5,
+        target: 10,
+        firstPass: 3,
+        returnPass: 2,
+        side: 2,
+        instruction: "Ch 5. 3 sc, 3 sc in last ch, 2 sc, inc (10 sts)",
+      },
+      12: {
+        ch: 6,
+        target: 12,
+        firstPass: 4,
+        returnPass: 3,
+        side: 3,
+        instruction: "Ch 6. 4 sc, 3 sc in last ch, 3 sc, inc (12 sts)",
+      },
+      14: {
+        ch: 7,
+        target: 14,
+        firstPass: 5,
+        returnPass: 4,
+        side: 4,
+        instruction: "Ch 7. 5 sc, 3 sc in last ch, 4 sc, inc (14 sts)",
+      },
+    };
+    // Resolve by target total first, else by chain length
+    let key = null;
+    const n = Math.round(targetOrCh);
+    if (table[n]) key = n;
+    else if (n === 5) key = 10;
+    else if (n === 6) key = 12;
+    else if (n === 7) key = 14;
+    else if (n < 5) key = 10;
+    else if (n > 7) key = 14;
+    else key = 12;
+    return table[key];
+  }
+
+  /**
    * CRITICAL MULTI-ROUND OVAL SCALING STANDARD.
    * expandIndex 0 (first expand after R1): (3 inc, S sc) x2
    * expandIndex >= 1: ((inc, Y sc) x3, S sc) x2 where Y = expandIndex (Y += 1 each round)
@@ -209,7 +254,7 @@
   function planOvalRadiusInc(side, expandIndex) {
     const S = Math.max(1, Math.round(side));
     const e = Math.max(0, Math.round(expandIndex || 0));
-    // Tip stitches entering this round: R1 tip=3; each expand adds +3 at each tip
+    // Tip stitches entering this round: R1 tip≈3; each expand adds +3 at each tip
     const tip = 3 * (e + 1);
     const tipNext = tip + 3;
     const consume = 2 * (tip + S);
@@ -238,42 +283,34 @@
   }
 
   /**
-   * Rule B — symmetrical foundation oval + tip-only expansion.
-   * Straight side length = (Ch − 2) on BOTH passes; that side count stays fixed
-   * while later rounds only add stitches at the curved radiuses.
+   * Rule B — oval from coalesced foundation + tip-only expansion.
+   * R1 is always the hard coalescence string for target 10/12/14.
+   * Expand rounds keep Straight_Side_Sts = returnPass (= ch−3) constant.
    */
   function symmetricOvalFromChain(chLen, options) {
     options = options || {};
-    let ch = Math.max(4, Math.round(chLen));
+    const base = ovalFoundationCoalescence(
+      options.targetR1 != null ? options.targetR1 : chLen
+    );
     const expandRounds =
       options.expandRounds != null ? Math.max(0, options.expandRounds) : 3;
-    const side = ch - 2; // Axis Formula — both passes
-    // R1: side sc, 3 sc in last, side sc, 3 sc in first
+    const side = base.side; // constant straight axis for radius expands
     const tip0 = 3;
-    const r1 = side + tip0 + side + tip0;
     const rounds = [];
 
     rounds.push({
-      produce: r1,
+      produce: base.target,
       consume: 0,
-      ch: ch,
-      firstPassLoops: side,
-      returnPassLoops: side,
+      ch: base.ch,
+      firstPassLoops: base.firstPass,
+      returnPassLoops: base.returnPass,
       side: side,
       tipSts: tip0,
-      instruction:
-        "Ch " +
-        ch +
-        ". Starting in 2nd ch from hook: " +
-        side +
-        " sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: " +
-        side +
-        " sc, 3 sc in the first ch " +
-        stsCount(r1),
+      instruction: base.instruction,
     });
 
     let tip = tip0;
-    let prev = r1;
+    let prev = base.target;
     for (let e = 0; e < expandRounds; e += 1) {
       const step = planOvalRadiusInc(side, e);
       rounds.push({
@@ -291,12 +328,13 @@
     }
 
     return {
-      ch: ch,
+      ch: base.ch,
       side: side,
-      firstPassLoops: side,
-      returnPassLoops: side,
+      firstPassLoops: base.firstPass,
+      returnPassLoops: base.returnPass,
       soleMax: prev,
       tipSts: tip,
+      targetR1: base.target,
       rounds: rounds,
     };
   }
@@ -3950,31 +3988,20 @@
 
 
   /**
-   * Small foundation oval for sew-on patches (Ch 4–6).
-   * Equal straight sides = (Ch − 2); tip-only curves.
+   * Small foundation oval for sew-on patches.
+   * Always uses HARD COALESCENCE R1 — never invent stretched-chain text.
    */
   function flatOvalPatchFromChain(chLen) {
-    let ch = Math.max(4, Math.round(chLen || 5));
-    if (ch > 8) ch = 8;
-    const side = ch - 2;
-    const tip = 3;
-    const r1 = side + tip + side + tip;
+    const base = ovalFoundationCoalescence(chLen || 5);
     return {
-      ch: ch,
-      firstPassLoops: side,
-      returnPassLoops: side,
-      side: side,
-      tipSts: tip,
-      produce: r1,
-      instruction:
-        "Ch " +
-        ch +
-        ". Starting in 2nd ch from hook: " +
-        side +
-        " sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: " +
-        side +
-        " sc, 3 sc in the first ch " +
-        stsCount(r1),
+      ch: base.ch,
+      firstPassLoops: base.firstPass,
+      returnPassLoops: base.returnPass,
+      side: base.side,
+      tipSts: 3,
+      produce: base.target,
+      targetR1: base.target,
+      instruction: base.instruction,
     };
   }
 
@@ -4060,7 +4087,7 @@
    */
   function buildOtterMuzzlePattern(name, gauge, options) {
     options = options || {};
-    const oval = flatOvalPatchFromChain(options.chLen || 5);
+    const oval = flatOvalPatchFromChain(options.chLen || options.targetR1 || 10);
     const lines = [];
     let r = 0;
     let stitches = oval.produce;
@@ -4183,7 +4210,11 @@
    */
   function buildOtterPaddleFootPattern(name, gauge, options) {
     options = options || {};
-    const oval = symmetricOvalFromChain(options.chLen || 6);
+    // Paddle sole: target R1 = 14 → hard Ch 7 coalescence (never stretch Ch 6 to 14)
+    const oval = symmetricOvalFromChain(options.chLen || 7, {
+      targetR1: options.targetR1 || 14,
+      expandRounds: options.expandRounds != null ? options.expandRounds : 3,
+    });
     const totalBudget = Math.max(6, Math.min(8, options.maxRounds || 7));
     const lines = [];
     let r = 0;
@@ -4467,6 +4498,7 @@
     planIncAround: planIncAround,
     planDecAround: planDecAround,
     planOvalRadiusInc: planOvalRadiusInc,
+    ovalFoundationCoalescence: ovalFoundationCoalescence,
     flatFoldPlan: flatFoldPlan,
     symmetricOvalFromChain: symmetricOvalFromChain,
     faceShapingRoundPlan: faceShapingRoundPlan,

@@ -538,7 +538,8 @@
       );
     } else if (part.shape === "otter-muzzle") {
       pattern = shapes.buildOtterMuzzlePattern(part.label, gauge, {
-        chLen: part.chLen || 5,
+        chLen: part.chLen || part.targetR1 || 10,
+        targetR1: part.targetR1 || 10,
       });
     } else if (part.shape === "otter-arm") {
       pattern = shapes.buildOtterNarrowArmPattern(
@@ -548,7 +549,8 @@
       );
     } else if (part.shape === "otter-paddle-foot") {
       pattern = shapes.buildOtterPaddleFootPattern(part.label, gauge, {
-        chLen: part.chLen || 6,
+        chLen: part.chLen || 7,
+        targetR1: part.targetR1 || 14,
         maxRounds: part.maxRounds || 7,
       });
     } else if (part.shape === "otter-tail") {

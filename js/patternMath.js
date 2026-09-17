@@ -315,17 +315,25 @@
     const maxLinear = ch - 2;
     const issues = [];
 
-    // Symmetrical form: both passes = (ch − 2), tips are 3 sc in last / 3 sc in first
+    // HARD COALESCENCE forms (canonical)
+    // Ch 5 → 10: 3 sc, 3 sc in last ch, 2 sc, inc
+    // Ch 6 → 12: 4 sc, 3 sc in last ch, 3 sc, inc
+    // Ch 7 → 14: 5 sc, 3 sc in last ch, 4 sc, inc
+    const hard = {
+      5: { first: 3, ret: 2, target: 10 },
+      6: { first: 4, ret: 3, target: 12 },
+      7: { first: 5, ret: 4, target: 14 },
+    };
+
     let first = null;
     let ret = null;
-    const symmetric = text.match(
-      /2nd ch from hook:\s*(\d+)\s*sc,\s*3 sc in the last ch[\s\S]*?foundation chain:\s*(\d+)\s*sc,\s*3 sc in the first/i
+    const coalesce = text.match(
+      /(?:^|\.\s*)(\d+)\s*sc,\s*3 sc in last ch,\s*(\d+)\s*sc,\s*inc/i
     );
-    if (symmetric) {
-      first = parseInt(symmetric[1], 10);
-      ret = parseInt(symmetric[2], 10);
+    if (coalesce) {
+      first = parseInt(coalesce[1], 10);
+      ret = parseInt(coalesce[2], 10);
     } else {
-      // Legacy asymmetric: return side + inc
       const preferred = text.match(
         /2nd ch from hook:\s*(\d+)\s*sc,\s*3 sc in the last ch[\s\S]*?foundation chain:\s*(\d+)\s*sc,\s*inc/i
       );
@@ -359,26 +367,40 @@
         "Return-pass linear sc (" + ret + ") exceeds ch−2 (" + maxLinear + ")."
       );
     }
-    // Symmetrical axis: both straight sides should equal (ch − 2)
-    if (first !== ret) {
+
+    // Forbidden stretch: claiming tip "3 sc in the first ch" on a short chain
+    if (/3 sc in the first ch/i.test(text)) {
       issues.push(
-        "Straight sides must match (got " +
-          first +
-          " and " +
-          ret +
-          "); both should be ch−2 (" +
-          maxLinear +
-          ")."
-      );
-    } else if (first !== maxLinear) {
-      issues.push(
-        "Straight side length should be ch−2 (" +
-          maxLinear +
-          "), got " +
-          first +
-          "."
+        "HARD COALESCENCE: do not use '3 sc in the first ch' — use the fixed Ch→target map (10/12/14) with trailing inc."
       );
     }
+      if (first !== expect.first || ret !== expect.ret) {
+        issues.push(
+          "HARD COALESCENCE: Ch " +
+            ch +
+            " requires " +
+            expect.first +
+            " sc / " +
+            expect.ret +
+            " sc, inc (target " +
+            expect.target +
+            " sts) — never stretch a shorter chain."
+        );
+      }
+      const claimed = text.match(/\((\d+)\s*(?:sts?)?\)\s*$/i);
+      if (claimed && parseInt(claimed[1], 10) !== expect.target) {
+        issues.push(
+          "HARD COALESCENCE: Ch " +
+            ch +
+            " must claim (" +
+            expect.target +
+            " sts), got (" +
+            claimed[1] +
+            ")."
+        );
+      }
+    }
+
     return {
       ok: issues.length === 0,
       ch: ch,
@@ -601,27 +623,40 @@
         });
       }
 
-      // CRITICAL MULTIPLIER COUPLING: every xN must divide previous round total
+      // CRITICAL MULTIPLIER COUPLING: xN must divide prev when the repeat
+      // is the WHOLE round (no leftover plain tokens). Partial tip/taper
+      // accents like "9 sc, (dec, 1 sc) x4, 9 sc" are allowed.
       if (result.expansion && prev != null) {
-        for (let ei = 0; ei < result.expansion.length; ei += 1) {
-          const ex = result.expansion[ei];
-          if (ex.kind === "repeat" && ex.times > 1 && prev % ex.times !== 0) {
-            issues.push({
-              line: i + 1,
-              text: raw,
-              message:
-                "Multiplier coupling: x" +
-                ex.times +
-                " is not a factor of previous round (" +
-                prev +
-                "). Use a multiplier that divides " +
-                prev +
-                " (e.g. factors of " +
-                prev +
-                ").",
-              prev: prev,
-              multiplier: ex.times,
-            });
+        const plains = result.expansion.filter(function (ex) {
+          return ex.kind === "plain";
+        });
+        const repeats = result.expansion.filter(function (ex) {
+          return ex.kind === "repeat" && ex.times > 1;
+        });
+        const plainConsume = plains.reduce(function (s, ex) {
+          return s + (ex.consume || 0);
+        }, 0);
+        if (repeats.length >= 1 && plainConsume === 0) {
+          for (let ei = 0; ei < repeats.length; ei += 1) {
+            const ex = repeats[ei];
+            if (prev % ex.times !== 0) {
+              issues.push({
+                line: i + 1,
+                text: raw,
+                message:
+                  "Multiplier coupling: x" +
+                  ex.times +
+                  " is not a factor of previous round (" +
+                  prev +
+                  "). Use a multiplier that divides " +
+                  prev +
+                  " (e.g. factors of " +
+                  prev +
+                  ").",
+                prev: prev,
+                multiplier: ex.times,
+              });
+            }
           }
         }
       }

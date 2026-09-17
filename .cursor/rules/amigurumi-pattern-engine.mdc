@@ -51,12 +51,16 @@ When a pattern flattens a 3D tube and crochets through both layers to close it:
 
 Use `flatFoldPlan()` in `js/shapes.js`. Do not invent “about half.”
 
-## 5. Rule B — Symmetrical foundation oval (CRITICAL)
+## 5. Rule B — Oval foundation + HARD COALESCENCE (CRITICAL)
 
-Straight side length = **(Ch − 2)** on **both** passes (same linear count). Tip curves only: `3 sc in the last ch` / `3 sc in the first ch`.
+**FORBIDDEN:** reuse cached/wrong R1 text, or stretch a short chain to hit a higher stitch total.
 
-Example Ch 6 → `(14 sts)`:
-`Ch 6. Starting in 2nd ch from hook: 4 sc, 3 sc in the last ch. Working along the opposite side of the foundation chain: 4 sc, 3 sc in the first ch (14 sts)`
+Hard coalescence map (exact instruction strings):
+- Target **10** → `Ch 5. 3 sc, 3 sc in last ch, 2 sc, inc (10 sts)`
+- Target **12** → `Ch 6. 4 sc, 3 sc in last ch, 3 sc, inc (12 sts)`
+- Target **14** → `Ch 7. 5 sc, 3 sc in last ch, 4 sc, inc (14 sts)`
+
+Use `ovalFoundationCoalescence()` / `symmetricOvalFromChain()`. Expansion straight-side **S = return pass (ch−3)**.
 
 **CRITICAL MULTI-ROUND OVAL SCALING STANDARD:**
 When scaling a flat oval past Round 2, **forbidden** to invent micro-nested tip sequences that warp the straight axis (e.g. ad-hoc `inc, sc, inc, sc…` with changing side counts).
@@ -64,7 +68,7 @@ When scaling a flat oval past Round 2, **forbidden** to invent micro-nested tip 
 Use only:
 - First expand after R1: `(3 inc, Straight_Side_Sts) x2`
 - Each later expand: `((inc, Y sc) x3, Straight_Side_Sts) x2` where **Y increases by exactly 1** each round (Y=1, then 2, then 3…)
-- `Straight_Side_Sts` stays **constant** (= Ch−2 from R1)
+- `Straight_Side_Sts` stays **constant** (= return pass from R1)
 
 Implement via `planOvalRadiusInc(side, expandIndex)` / `symmetricOvalFromChain()`. Any oval expand that changes the side count is a compiler failure.
 

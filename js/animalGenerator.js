@@ -1277,6 +1277,7 @@
         shape: "otter-muzzle",
         geometry: "cream oval patch, sew-on",
         chLen: 5,
+        targetR1: 10,
         count: 1,
       });
       parts.push({
@@ -1300,7 +1301,8 @@
         label: "Hindlimbs / Paddle Feet",
         shape: "otter-paddle-foot",
         geometry: "flat oval paddle, fold-close",
-        chLen: 6,
+        chLen: 7,
+        targetR1: 14,
         maxRounds: 7,
         count: 2,
       });
