@@ -101,6 +101,8 @@ Values:
 - `CONTINUOUS_NOSE_FIRST` — snout→head one piece; solid Cream R1–7 then clean round-switch to Main (no mid-row tapestry)
 - `auto` — pick from animal family / photo (otter/floppy water mammal default `SEPARATE_PATCH`; hippo-style continuous muzzle→head uses `CONTINUOUS_NOSE_FIRST`)
 
+Frontend lock: form choices are serialized to `AmigurumiPatternRequest` (`js/patternRequest.js`) before generation — `facialConstructionStyle` in that JSON is always one of the two enums (auto is resolved first).
+
 ### PATH A: `SEPARATE_PATCH`
 
 - **HEAD:** Clean single-color sphere. Maximize at target width (e.g. 36 / 42 / 48 sts), hold proportional depth even rounds, decrease symmetrically to close at the back/neck.

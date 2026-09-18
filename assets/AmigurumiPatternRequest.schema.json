@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org",
+  "title": "AmigurumiPatternRequest",
+  "type": "object",
+  "properties": {
+    "animalSpecies": {
+      "type": "string",
+      "enum": ["otter", "cat", "hippo", "deer", "bear", "custom"]
+    },
+    "targetHeightInches": {
+      "type": "number",
+      "minimum": 3,
+      "maximum": 24,
+      "default": 10.0
+    },
+    "yarnMetric": {
+      "type": "object",
+      "properties": {
+        "weightClass": { "type": "integer", "enum": [4, 5, 6, 7] },
+        "materialType": {
+          "type": "string",
+          "enum": ["chenille", "velvet", "acrylic", "cotton"]
+        },
+        "hookSizeMm": { "type": "number" }
+      },
+      "required": ["weightClass", "materialType", "hookSizeMm"]
+    },
+    "facialConstructionStyle": {
+      "type": "string",
+      "enum": ["SEPARATE_PATCH", "CONTINUOUS_NOSE_FIRST"]
+    },
+    "limbAttachmentStyle": {
+      "type": "string",
+      "enum": ["SEW_ON_POST_ASSEMBLY", "NO_SEW_JOIN_AS_YOU_GO"]
+    },
+    "bodySilhouette": {
+      "type": "string",
+      "enum": [
+        "CHUBBY_FLOPPY_SEATED",
+        "SITTING_UPRIGHT_WIDE_HIP",
+        "SLENDER_PEAR_NECK_TUBE"
+      ]
+    }
+  },
+  "required": [
+    "animalSpecies",
+    "targetHeightInches",
+    "yarnMetric",
+    "facialConstructionStyle",
+    "limbAttachmentStyle",
+    "bodySilhouette"
+  ]
+}

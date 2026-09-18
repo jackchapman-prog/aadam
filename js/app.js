@@ -55,7 +55,27 @@
 
   function currentHeight() {
     const height = Number(heightInput.value);
-    return height > 0 ? height : 10;
+    if (!(height > 0)) return 10;
+    return Math.min(24, Math.max(3, height));
+  }
+
+  function readPatternRequest() {
+    const PR = window.AmigurumiPatternRequest;
+    if (!PR) return null;
+    return PR.buildFromForm({
+      animalName: animalNameInput.value,
+      targetHeightInches: currentHeight(),
+      yarnWeight: yarnWeightSelect.value,
+      yarnType: yarnTypeSelect.value,
+      hookSize: hookSelect.value,
+      facialConstructionStyle: document.getElementById("facial-construction")
+        .value,
+      limbAttachmentStyle: document.getElementById("limb-attachment").value,
+      bodySilhouette: (function () {
+        const v = document.getElementById("body-silhouette").value;
+        return v === "auto" ? null : v;
+      })(),
+    });
   }
 
   function previewRecipe() {
@@ -65,9 +85,23 @@
       return null;
     }
     try {
-      const animal = generator.generateAnimal(name, currentHeight(), {
-        photoMetrics: photoMetrics,
-      });
+      const PR = window.AmigurumiPatternRequest;
+      const req = readPatternRequest();
+      const reqOpts = req && PR ? PR.toGeneratorOptions(req) : {};
+      const animal = generator.generateAnimal(
+        (req && req._customAnimalName) || name,
+        (req && req.targetHeightInches) || currentHeight(),
+        {
+          photoMetrics: photoMetrics,
+          posture: reqOpts.posture || "auto",
+          shaping: reqOpts.shaping || "auto",
+          assemblyStyle: reqOpts.assemblyStyle || "jayg",
+          facialConstructionStyle: reqOpts.facialConstructionStyle || "auto",
+          bodySilhouette: reqOpts.bodySilhouette || null,
+          limbAttachmentStyle: reqOpts.limbAttachmentStyle || null,
+          patternRequest: req,
+        }
+      );
       const featureList = Object.keys(animal.features)
         .filter(function (key) {
           return animal.features[key];
@@ -78,6 +112,16 @@
         " Body plan: " +
         animal.plan +
         (featureList ? ". Features: " + featureList + "." : ".");
+      if (req) {
+        blurb +=
+          " Request: " +
+          req.animalSpecies +
+          " / " +
+          req.bodySilhouette +
+          " / " +
+          req.facialConstructionStyle +
+          ".";
+      }
       if (photoMetrics && photoMetrics.applied) {
         blurb += " Photo proportions: " + photoMetrics.posture + ".";
       }
@@ -772,33 +816,52 @@
 
   function generatePatternText() {
     const gauge = readGauge();
-    const height = currentHeight();
-    const yarnWeight = document.getElementById("yarn-weight").value;
-    const yarnType = document.getElementById("yarn-type").value || "yarn";
-    const hookSize = document.getElementById("hook-size").value;
-    const posture = document.getElementById("posture").value;
-    const shaping = document.getElementById("shaping").value;
-    const assemblyStyle = document.getElementById("assembly-style").value;
-    const facialConstructionStyle = document.getElementById(
-      "facial-construction"
-    ).value;
+    const yarnWeight = yarnWeightSelect.value;
+    const yarnType = yarnTypeSelect.value || "yarn";
+    const hookSize = hookSelect.value;
+
+    const PR = window.AmigurumiPatternRequest;
+    const patternRequest = readPatternRequest();
+
+    if (patternRequest && PR) {
+      const check = PR.validate(patternRequest);
+      if (!check.ok) {
+        throw new Error(
+          "Pattern request invalid: " + (check.issues || []).join("; ")
+        );
+      }
+    }
+
+    const reqOpts =
+      patternRequest && PR ? PR.toGeneratorOptions(patternRequest) : {};
+    const height =
+      (patternRequest && patternRequest.targetHeightInches) || currentHeight();
 
     const yarnProfile =
       window.AmigurumiPatternMath &&
       window.AmigurumiPatternMath.yarnScaleProfile
         ? window.AmigurumiPatternMath.yarnScaleProfile(
-            yarnWeight,
-            yarnType,
+            (reqOpts.yarnProfileHint && reqOpts.yarnProfileHint.yarnWeight) ||
+              yarnWeight,
+            (reqOpts.yarnProfileHint && reqOpts.yarnProfileHint.yarnType) ||
+              yarnType,
             height
           )
         : null;
 
-    const animal = generator.generateAnimal(animalNameInput.value, height, {
+    const animalName =
+      (patternRequest && patternRequest._customAnimalName) ||
+      animalNameInput.value;
+
+    const animal = generator.generateAnimal(animalName, height, {
       photoMetrics: photoMetrics,
-      posture: posture,
-      shaping: shaping,
-      assemblyStyle: assemblyStyle,
-      facialConstructionStyle: facialConstructionStyle,
+      posture: reqOpts.posture || "auto",
+      shaping: reqOpts.shaping || "auto",
+      assemblyStyle: reqOpts.assemblyStyle || "jayg",
+      facialConstructionStyle: reqOpts.facialConstructionStyle || "auto",
+      bodySilhouette: reqOpts.bodySilhouette || null,
+      limbAttachmentStyle: reqOpts.limbAttachmentStyle || null,
+      patternRequest: patternRequest,
       yarnProfile: yarnProfile,
     });
 
@@ -810,6 +873,12 @@
       yarnType,
       hookSize
     );
+
+    // Lock request JSON at the top so generation rules match the form exactly
+    if (patternRequest && PR) {
+      result.text = PR.toPromptBlock(patternRequest) + "\n" + result.text;
+      result.patternRequest = patternRequest;
+    }
 
     // Math compiler: Rule D enforce, then Rule D + Rule A audit
     if (window.AmigurumiPatternMath) {
@@ -930,11 +999,8 @@
   rpiInput.addEventListener("input", scheduleRegen);
   yarnTypeSelect.addEventListener("change", scheduleRegen);
   hookSelect.addEventListener("change", scheduleRegen);
-  document.getElementById("posture").addEventListener("change", scheduleRegen);
-  document.getElementById("shaping").addEventListener("change", scheduleRegen);
-  document
-    .getElementById("assembly-style")
-    .addEventListener("change", scheduleRegen);
+  document.getElementById("body-silhouette").addEventListener("change", scheduleRegen);
+  document.getElementById("limb-attachment").addEventListener("change", scheduleRegen);
   document
     .getElementById("facial-construction")
     .addEventListener("change", scheduleRegen);

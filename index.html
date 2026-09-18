@@ -145,29 +145,21 @@
           <legend>Build style</legend>
           <div class="field-row">
             <label>
-              Posture
-              <select id="posture" name="posture">
+              Body silhouette
+              <select id="body-silhouette" name="bodySilhouette">
                 <option value="auto" selected>Auto (from animal)</option>
-                <option value="sitting">Sitting (hips / JAYG)</option>
-                <option value="dangling">Dangling / floppy</option>
-                <option value="quadruped">Standing on all fours</option>
+                <option value="CHUBBY_FLOPPY_SEATED">Chubby floppy seated</option>
+                <option value="SITTING_UPRIGHT_WIDE_HIP">Sitting upright (wide hip)</option>
+                <option value="SLENDER_PEAR_NECK_TUBE">Slender pear + neck tube</option>
               </select>
             </label>
             <label>
-              Shaping accent
-              <select id="shaping" name="shaping">
-                <option value="auto" selected>Auto (from animal)</option>
-                <option value="chubby">Chubby / pear belly</option>
-                <option value="sculpted-face">Sculpted face (no sew-on snout)</option>
-                <option value="sew-snout">Sew-on snout</option>
-              </select>
-            </label>
-            <label>
-              Assembly
-              <select id="assembly-style" name="assemblyStyle">
-                <option value="jayg" selected>No-sew limbs (join as you go)</option>
-                <option value="partial">Partial sew</option>
-                <option value="sew">Sew-on pieces</option>
+              Limb attachment
+              <select id="limb-attachment" name="limbAttachmentStyle">
+                <option value="NO_SEW_JOIN_AS_YOU_GO" selected>
+                  No-sew (join as you go)
+                </option>
+                <option value="SEW_ON_POST_ASSEMBLY">Sew-on after assembly</option>
               </select>
             </label>
             <label>
@@ -182,10 +174,9 @@
             </label>
           </div>
           <p class="hint">
-            These steer construction. “Auto” keeps the owned style for that animal
-            (e.g. Cat → Kitten Kaya sitting + JAYG). Face construction chooses sphere+patch
-            vs continuous snout→head (cream R1–7, switch to main at Round 8 — no mid-row
-            tapestry) when the animal supports both (e.g. otter).
+            These lock into a Pattern Request JSON before generation (species, height,
+            yarn, face, limbs, silhouette) so the engine cannot silently pick a different
+            path. “Auto” still resolves to one exact enum value for that animal.
           </p>
         </fieldset>
 
@@ -210,7 +201,8 @@
                 type="number"
                 id="total-height"
                 name="totalHeight"
-                min="1"
+                min="3"
+                max="24"
                 step="0.5"
                 value="10"
                 required
@@ -254,10 +246,11 @@
       </section>
     </main>
 
-    <script src="js/shapes.js?v=engine17"></script>
-    <script src="js/animalGenerator.js?v=engine17"></script>
-    <script src="js/patternMath.js?v=engine17"></script>
-    <script src="js/photoAnalysis.js?v=engine17"></script>
-    <script src="js/app.js?v=engine17"></script>
+    <script src="js/shapes.js?v=engine18"></script>
+    <script src="js/patternRequest.js?v=engine18"></script>
+    <script src="js/animalGenerator.js?v=engine18"></script>
+    <script src="js/patternMath.js?v=engine18"></script>
+    <script src="js/photoAnalysis.js?v=engine18"></script>
+    <script src="js/app.js?v=engine18"></script>
   </body>
 </html>

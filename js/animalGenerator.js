@@ -2370,8 +2370,29 @@
       throw new Error("Type an animal name first (for example: deer, fox, octopus).");
     }
 
-    // UI posture override (when not "auto")
-    if (options.posture === "sitting") {
+    // UI posture override (when not "auto") — patternRequest silhouette wins
+    if (options.bodySilhouette === "CHUBBY_FLOPPY_SEATED") {
+      analysis.plan = "sitting";
+      analysis.features.sitting = true;
+      analysis.features.floppyWaterMammal =
+        analysis.features.floppyWaterMammal ||
+        includesAny(analysis.name.toLowerCase(), ["otter", "beaver", "seal"]);
+      options.shaping = options.shaping === "auto" ? "chubby" : options.shaping;
+      options.posture = "sitting";
+    } else if (options.bodySilhouette === "SITTING_UPRIGHT_WIDE_HIP") {
+      analysis.plan = "sitting";
+      analysis.features.sitting = true;
+      options.posture = "sitting";
+    } else if (options.bodySilhouette === "SLENDER_PEAR_NECK_TUBE") {
+      if (includesAny(analysis.name.toLowerCase(), ["deer", "fawn", "stag"])) {
+        analysis.plan = "biped";
+        analysis.features.antlers = true;
+        options.posture = "dangling";
+      } else {
+        analysis.plan = "quadruped";
+        options.posture = "quadruped";
+      }
+    } else if (options.posture === "sitting") {
       analysis.plan = "sitting";
       analysis.features.sitting = true;
     } else if (options.posture === "quadruped") {
@@ -2445,6 +2466,19 @@
       );
     }
 
+    if (options.patternRequest && built.assembly) {
+      built.assembly.unshift(
+        "Locked request: " +
+          options.patternRequest.animalSpecies +
+          " · " +
+          options.patternRequest.bodySilhouette +
+          " · " +
+          options.patternRequest.facialConstructionStyle +
+          " · " +
+          options.patternRequest.limbAttachmentStyle
+      );
+    }
+
     return {
       id: analysis.name.toLowerCase().replace(/\s+/g, "-"),
       name: analysis.name,
@@ -2459,22 +2493,27 @@
       photoMetrics: photo && photo.applied ? photo : null,
       qualityNotes: built.qualityNotes || null,
       yarnProfile: options.yarnProfile || null,
+      patternRequest: options.patternRequest || null,
       buildOptions: {
         posture: options.posture || "auto",
         shaping: options.shaping || "auto",
         assemblyStyle: options.assemblyStyle || "jayg",
         facialConstructionStyle: options.facialConstructionStyle || "auto",
+        bodySilhouette: options.bodySilhouette || null,
+        limbAttachmentStyle: options.limbAttachmentStyle || null,
       },
     };
   }
 
   const quickPicks = [
+    "Otter",
     "Deer",
     "Unicorn",
     "Hippo",
     "Chinchilla",
     "Fox",
     "Cat",
+    "Teddy Bear",
     "Elephant",
     "Giraffe",
     "Owl",
@@ -2483,7 +2522,6 @@
     "Octopus",
     "Turtle",
     "Bunny",
-    "Teddy Bear",
   ];
 
   global.AmigurumiGenerator = {
