@@ -177,18 +177,6 @@ function createOtter3DPreview(container, options) {
   fill.position.set(-3, 2, -2);
   scene.add(fill);
 
-  // Desk plane
-  const desk = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.6, 1.6, 0.08, 48),
-    new THREE.MeshStandardMaterial({
-      color: 0xd4c4a8,
-      roughness: 0.85,
-    })
-  );
-  desk.position.y = -0.05;
-  desk.receiveShadow = true;
-  scene.add(desk);
-
   const otterRoot = new THREE.Group();
   otterRoot.add(buildOtterGroup(faceStyle));
   scene.add(otterRoot);
