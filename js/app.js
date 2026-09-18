@@ -1115,8 +1115,12 @@
           resolve(window.AmigurumiPlush3D || window.AmigurumiOtter3D);
           return;
         }
-        if (Date.now() - start > (timeoutMs || 4000)) {
-          reject(new Error("3D module still loading — try again in a second."));
+        if (Date.now() - start > (timeoutMs || 8000)) {
+          reject(
+            new Error(
+              "3D module failed to load (check internet for Three.js CDN, then hard-refresh)."
+            )
+          );
           return;
         }
         setTimeout(tick, 50);

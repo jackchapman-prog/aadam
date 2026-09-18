@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine39";
+var BUILD_TAG = "engine40";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -1026,7 +1026,7 @@ function buildDeerGroup(animal, gauge, mats) {
     label:
       "dangling deer · antlers Y · muzzle · ears · " +
       headD.toFixed(1) +
-      '" head",
+      '" head',
   };
 }
 
