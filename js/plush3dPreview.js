@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine45";
+var BUILD_TAG = "engine46";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -1113,8 +1113,11 @@ function buildElephantGroup(animal, gauge, mats) {
   const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.44), spi, cap);
   const legD = finishedDiameterIn(inch(legP, "diameterIn", H * 0.16), spi, cap);
   const legH = inch(legP, "heightIn", H * 0.22);
-  // Ears must dominate — never smaller than the head in the preview
-  const earD = Math.max(inch(earP, "diameterIn", headD * 1.25), headD * 1.15);
+  // Ears: larger than a cat, but not bigger than the head
+  const earD = Math.min(
+    Math.max(inch(earP, "diameterIn", headD * 0.72), headD * 0.55),
+    headD * 0.85
+  );
   const trunkBaseD = Math.max(inch(trunkP, "diameterIn", headD * 0.3), headD * 0.26);
   const trunkLen = Math.max(inch(trunkP, "heightIn", headD * 1.2), headD * 1.05);
 
@@ -1177,26 +1180,25 @@ function buildElephantGroup(animal, gauge, mats) {
     0
   );
 
-  // HUGE fan ears — flat pancakes fanning from the sides
+  // Floppy ear flaps — flat pancakes on the sides (readable, not cartoon-giant)
   const eHalf = u(earD / 2);
-  const eThick = u(Math.max(headD * 0.06, 0.12));
+  const eThick = u(Math.max(headD * 0.05, 0.08));
   [-1, 1].forEach(function (side) {
     const earGroup = new THREE.Group();
-    earGroup.position.set(headX - headR * 0.05, headY + headR * 0.05, side * headR * 0.55);
-    earGroup.rotation.y = side * -0.55;
-    earGroup.rotation.z = side * 0.15;
-    earGroup.rotation.x = side * 0.1;
+    earGroup.position.set(headX, headY + headR * 0.1, side * headR * 0.7);
+    earGroup.rotation.y = side * -0.25;
+    earGroup.rotation.z = side * 0.08;
     group.add(earGroup);
 
     const flap = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 16), mats.main);
-    flap.scale.set(eThick, eHalf * 1.05, eHalf * 0.95);
-    flap.position.set(0, -eHalf * 0.15, side * eHalf * 0.55);
+    flap.scale.set(eThick, eHalf * 0.95, eHalf * 0.85);
+    flap.position.set(0, -eHalf * 0.2, side * eHalf * 0.35);
     flap.castShadow = true;
     earGroup.add(flap);
 
     const inner = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), mats.cream);
-    inner.scale.set(eThick * 0.45, eHalf * 0.7, eHalf * 0.62);
-    inner.position.set(eThick * 0.6, -eHalf * 0.12, side * eHalf * 0.5);
+    inner.scale.set(eThick * 0.4, eHalf * 0.62, eHalf * 0.55);
+    inner.position.set(eThick * 0.55, -eHalf * 0.18, side * eHalf * 0.32);
     earGroup.add(inner);
   });
 

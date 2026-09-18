@@ -694,13 +694,13 @@
           key: "ear",
           label: "Ear (floppy)",
           shape: "dome",
-          geometry: "huge flat oval flap — bigger than the head",
-          diameterIn: headD * 1.25,
+          geometry: "large flat oval flap",
+          diameterIn: headD * 0.72,
           heightIn: headD * 0.1,
           count: 2,
           finishNotes: [
-            "Work flat (pancake). Elephant ears must read HUGE — wider than the head.",
-            "Sew to the sides of the head so they fan out and hang slightly forward.",
+            "Work flat (pancake). Bigger than a cat ear, but not bigger than the head.",
+            "Sew to the sides of the head so they fan out a little and hang slightly forward.",
           ],
         });
       } else {
