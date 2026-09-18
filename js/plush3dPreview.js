@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine44";
+var BUILD_TAG = "engine45";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);

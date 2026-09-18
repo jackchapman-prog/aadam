@@ -45,6 +45,7 @@
           "CHUBBY_FLOPPY_SEATED",
           "SITTING_UPRIGHT_WIDE_HIP",
           "SLENDER_PEAR_NECK_TUBE",
+          "STANDING_QUADRUPED",
         ],
       },
     },
@@ -155,18 +156,41 @@
     return "SEW_ON_POST_ASSEMBLY";
   }
 
-  function resolveSilhouette(bodyUi, postureUi, shapingUi, species) {
+  function resolveSilhouette(bodyUi, postureUi, shapingUi, species, customName) {
     if (SILHOUETTE_ENUM.indexOf(bodyUi) !== -1) return bodyUi;
-    if (shapingUi === "chubby" || species === "otter") {
+    const n = String(customName || species || "")
+      .toLowerCase()
+      .trim();
+
+    // Species / name first — never dump every "custom" animal into sitting teddy
+    if (species === "otter" || /\b(otter|beaver|seal)\b/.test(n)) {
       return "CHUBBY_FLOPPY_SEATED";
     }
-    if (postureUi === "sitting" || species === "cat" || species === "bear" || species === "hippo") {
-      return "SITTING_UPRIGHT_WIDE_HIP";
-    }
-    if (postureUi === "dangling" || postureUi === "quadruped" || species === "deer") {
+    if (species === "deer" || /\b(deer|fawn|stag|doe)\b/.test(n)) {
       return "SLENDER_PEAR_NECK_TUBE";
     }
-    if (species === "otter") return "CHUBBY_FLOPPY_SEATED";
+    if (
+      species === "cat" ||
+      species === "bear" ||
+      species === "hippo" ||
+      /\b(cat|kitten|hippo|bear|teddy|unicorn|bunny|rabbit|chinchilla)\b/.test(n)
+    ) {
+      return "SITTING_UPRIGHT_WIDE_HIP";
+    }
+    if (
+      /\b(elephant|mammoth|fox|wolf|dog|giraffe|horse|zebra|dragon|rhino|cow|pig)\b/.test(
+        n
+      )
+    ) {
+      return "STANDING_QUADRUPED";
+    }
+
+    if (shapingUi === "chubby") return "CHUBBY_FLOPPY_SEATED";
+    if (postureUi === "sitting") return "SITTING_UPRIGHT_WIDE_HIP";
+    if (postureUi === "dangling") return "SLENDER_PEAR_NECK_TUBE";
+    if (postureUi === "quadruped") return "STANDING_QUADRUPED";
+
+    // Unknown custom: prefer standing only if name hints at four legs; else sitting plush
     return "SITTING_UPRIGHT_WIDE_HIP";
   }
 
@@ -198,7 +222,8 @@
         form.bodySilhouette,
         form.posture,
         form.shaping,
-        species
+        species,
+        customName
       ),
     };
 
@@ -256,6 +281,8 @@
       shaping = "chubby";
     } else if (sil === "SITTING_UPRIGHT_WIDE_HIP") {
       posture = "sitting";
+    } else if (sil === "STANDING_QUADRUPED") {
+      posture = "quadruped";
     } else if (sil === "SLENDER_PEAR_NECK_TUBE") {
       posture = request.animalSpecies === "deer" ? "dangling" : "quadruped";
     }

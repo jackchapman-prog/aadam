@@ -2436,6 +2436,9 @@
       analysis.plan = "sitting";
       analysis.features.sitting = true;
       options.posture = "sitting";
+    } else if (options.bodySilhouette === "STANDING_QUADRUPED") {
+      analysis.plan = "quadruped";
+      options.posture = "quadruped";
     } else if (options.bodySilhouette === "SLENDER_PEAR_NECK_TUBE") {
       if (includesAny(analysis.name.toLowerCase(), ["deer", "fawn", "stag"])) {
         analysis.plan = "biped";
@@ -2455,6 +2458,13 @@
       analysis.features.antlers =
         analysis.features.antlers ||
         includesAny(analysis.name.toLowerCase(), ["deer", "fawn", "stag"]);
+    }
+
+    // Trunk animals must keep the quadruped recipe (trunk + big ears). Sitting
+    // silhouette would silently drop those parts and 3D becomes a teddy blob.
+    if (analysis.features.trunk) {
+      analysis.plan = "quadruped";
+      options.posture = "quadruped";
     }
 
     let built;
