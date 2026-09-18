@@ -241,11 +241,20 @@
         <fieldset>
           <legend>Plush image preview</legend>
           <p class="hint">
-            Creates a DALL·E 3 picture from a compiled crochet prompt (chenille
-            stitches, silhouette, face path) — not a generic cartoon. Paste an
-            OpenAI API key (saved only on this device). Billing required.
+            Builds a crochet-specific prompt from your settings, then generates a
+            preview. <strong>Free test</strong> needs no key (good while learning).
+            OpenAI DALL·E is optional and paid.
           </p>
           <div class="field-row">
+            <label>
+              Image provider
+              <select id="image-provider" name="imageProvider">
+                <option value="free" selected>Free test (no API key)</option>
+                <option value="openai">OpenAI DALL·E 3 (paid)</option>
+              </select>
+            </label>
+          </div>
+          <div id="openai-key-row" class="field-row" hidden>
             <label class="grow">
               OpenAI API key
               <input
@@ -253,7 +262,7 @@
                 id="openai-api-key"
                 name="openaiApiKey"
                 autocomplete="off"
-                placeholder="sk-…"
+                placeholder="sk-… (only if using OpenAI)"
                 spellcheck="false"
               />
             </label>
@@ -283,13 +292,13 @@
       </section>
     </main>
 
-    <script src="js/shapes.js?v=engine20"></script>
-    <script src="js/patternRequest.js?v=engine20"></script>
-    <script src="js/animalGenerator.js?v=engine20"></script>
-    <script src="js/patternMath.js?v=engine20"></script>
-    <script src="js/photoAnalysis.js?v=engine20"></script>
-    <script src="js/promptCompiler.js?v=engine20"></script>
-    <script src="js/imageGen.js?v=engine20"></script>
-    <script src="js/app.js?v=engine20"></script>
+    <script src="js/shapes.js?v=engine21"></script>
+    <script src="js/patternRequest.js?v=engine21"></script>
+    <script src="js/animalGenerator.js?v=engine21"></script>
+    <script src="js/patternMath.js?v=engine21"></script>
+    <script src="js/photoAnalysis.js?v=engine21"></script>
+    <script src="js/promptCompiler.js?v=engine21"></script>
+    <script src="js/imageGen.js?v=engine21"></script>
+    <script src="js/app.js?v=engine21"></script>
   </body>
 </html>

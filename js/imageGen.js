@@ -1,11 +1,15 @@
 /**
  * Text-to-image preview for AADAM plushies.
- * Pipeline: Pattern Request → promptCompiler → OpenAI DALL·E 3.
- * API key stays in localStorage only.
+ * Pipeline: Pattern Request → promptCompiler → image provider.
+ *
+ * Providers:
+ *  - free (default): Pollinations — no API key, good for testing
+ *  - openai: DALL·E 3 — needs a paid OpenAI key
  */
 (function (global) {
   const STORAGE_KEY = "aadam_openai_api_key";
-  const ENDPOINT = "https://api.openai.com/v1/images/generations";
+  const PROVIDER_KEY = "aadam_image_provider";
+  const OPENAI_ENDPOINT = "https://api.openai.com/v1/images/generations";
 
   function getApiKey() {
     try {
@@ -25,10 +29,26 @@
     }
   }
 
-  /**
-   * Build prompt via the Dynamic Prompt Compiler (elite crochet language).
-   * Falls back to a short stub only if the compiler script failed to load.
-   */
+  function getProvider() {
+    try {
+      const p = String(localStorage.getItem(PROVIDER_KEY) || "free").trim();
+      return p === "openai" ? "openai" : "free";
+    } catch (err) {
+      return "free";
+    }
+  }
+
+  function setProvider(provider) {
+    try {
+      localStorage.setItem(
+        PROVIDER_KEY,
+        provider === "openai" ? "openai" : "free"
+      );
+    } catch (err) {
+      /* private mode */
+    }
+  }
+
   function buildPrompt(patternRequest, extras) {
     extras = extras || {};
     if (global.AmigurumiPromptCompiler) {
@@ -46,21 +66,40 @@
     );
   }
 
-  /**
-   * Call OpenAI DALL·E 3. Returns { url, revisedPrompt, prompt }.
-   */
-  async function generatePlushImage(options) {
-    options = options || {};
-    const apiKey = String(options.apiKey || getApiKey() || "").trim();
-    if (!apiKey) {
+  /** Free test path — Pollinations image URL (no key, no billing). */
+  async function generateWithPollinations(prompt) {
+    // Keep URL reasonable; very long prompts can break some clients
+    const trimmed =
+      prompt.length > 1200 ? prompt.slice(0, 1200) : prompt;
+    const encoded = encodeURIComponent(trimmed);
+    const seed = Date.now() % 1000000;
+    const url =
+      "https://image.pollinations.ai/prompt/" +
+      encoded +
+      "?width=1024&height=1024&nologo=true&enhance=true&seed=" +
+      seed;
+
+    // Warm the URL (Pollinations generates on first fetch)
+    const res = await fetch(url, { method: "GET", mode: "cors" });
+    if (!res.ok) {
       throw new Error(
-        "Add your OpenAI API key in the Image preview section (kept only in this browser)."
+        "Free image service error (" +
+          res.status +
+          "). Try again in a moment."
       );
     }
-    const prompt =
-      options.prompt || buildPrompt(options.patternRequest, options);
-    if (!prompt) throw new Error("Missing image prompt.");
 
+    return {
+      url: url,
+      revisedPrompt: prompt,
+      prompt: prompt,
+      provider: "free",
+    };
+  }
+
+  /** Paid path — OpenAI DALL·E 3. */
+  async function generateWithOpenAI(prompt, apiKey, options) {
+    options = options || {};
     const body = {
       model: "dall-e-3",
       prompt: prompt,
@@ -69,7 +108,7 @@
       quality: options.quality || "standard",
     };
 
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -101,13 +140,37 @@
       url: item.url,
       revisedPrompt: item.revised_prompt || prompt,
       prompt: prompt,
+      provider: "openai",
     };
+  }
+
+  async function generatePlushImage(options) {
+    options = options || {};
+    const provider = options.provider || getProvider();
+    const prompt =
+      options.prompt || buildPrompt(options.patternRequest, options);
+    if (!prompt) throw new Error("Missing image prompt.");
+
+    if (provider === "openai") {
+      const apiKey = String(options.apiKey || getApiKey() || "").trim();
+      if (!apiKey) {
+        throw new Error(
+          "OpenAI selected: paste an API key, or switch provider to Free test."
+        );
+      }
+      return generateWithOpenAI(prompt, apiKey, options);
+    }
+
+    return generateWithPollinations(prompt);
   }
 
   global.AmigurumiImageGen = {
     STORAGE_KEY: STORAGE_KEY,
+    PROVIDER_KEY: PROVIDER_KEY,
     getApiKey: getApiKey,
     setApiKey: setApiKey,
+    getProvider: getProvider,
+    setProvider: setProvider,
     buildPrompt: buildPrompt,
     generatePlushImage: generatePlushImage,
   };

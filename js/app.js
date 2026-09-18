@@ -18,6 +18,8 @@
   const refStatus = document.getElementById("ref-status");
   const refCanvas = document.getElementById("ref-canvas");
   const openaiKeyInput = document.getElementById("openai-api-key");
+  const imageProviderSelect = document.getElementById("image-provider");
+  const openaiKeyRow = document.getElementById("openai-key-row");
   const genImageBtn = document.getElementById("gen-image-btn");
   const clearApiKeyBtn = document.getElementById("clear-api-key-btn");
   const imageGenStatus = document.getElementById("image-gen-status");
@@ -1081,18 +1083,33 @@
     imageGenStatus.classList.toggle("is-error", !!isError);
   }
 
-  function initImageGenUi() {
-    if (!window.AmigurumiImageGen || !openaiKeyInput) return;
-    const saved = window.AmigurumiImageGen.getApiKey();
-    if (saved) openaiKeyInput.value = saved;
+  function syncImageProviderUi() {
+    if (!window.AmigurumiImageGen || !imageProviderSelect) return;
+    const provider = imageProviderSelect.value === "openai" ? "openai" : "free";
+    window.AmigurumiImageGen.setProvider(provider);
+    if (openaiKeyRow) openaiKeyRow.hidden = provider !== "openai";
+  }
 
-    openaiKeyInput.addEventListener("change", function () {
-      window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
-    });
+  function initImageGenUi() {
+    if (!window.AmigurumiImageGen) return;
+
+    if (imageProviderSelect) {
+      imageProviderSelect.value = window.AmigurumiImageGen.getProvider();
+      imageProviderSelect.addEventListener("change", syncImageProviderUi);
+      syncImageProviderUi();
+    }
+
+    if (openaiKeyInput) {
+      const saved = window.AmigurumiImageGen.getApiKey();
+      if (saved) openaiKeyInput.value = saved;
+      openaiKeyInput.addEventListener("change", function () {
+        window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
+      });
+    }
 
     if (clearApiKeyBtn) {
       clearApiKeyBtn.addEventListener("click", function () {
-        openaiKeyInput.value = "";
+        if (openaiKeyInput) openaiKeyInput.value = "";
         window.AmigurumiImageGen.setApiKey("");
         setImageGenStatus("Saved API key cleared on this device.");
       });
@@ -1100,32 +1117,52 @@
 
     if (genImageBtn) {
       genImageBtn.addEventListener("click", async function () {
-        if (!window.AmigurumiImageGen) {
-          setImageGenStatus("Image module missing.", true);
-          return;
-        }
-        window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
         const req = readPatternRequest();
         if (!req) {
           setImageGenStatus("Could not build pattern request from the form.", true);
           return;
         }
+        const provider =
+          imageProviderSelect && imageProviderSelect.value === "openai"
+            ? "openai"
+            : "free";
+        window.AmigurumiImageGen.setProvider(provider);
+        if (provider === "openai" && openaiKeyInput) {
+          window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
+        }
+
         genImageBtn.disabled = true;
-        setImageGenStatus("Generating plush preview with DALL·E 3…");
+        setImageGenStatus(
+          provider === "free"
+            ? "Generating free test preview (no key)…"
+            : "Generating plush preview with DALL·E 3…"
+        );
         try {
           const result = await window.AmigurumiImageGen.generatePlushImage({
             patternRequest: req,
             displayName: req._displayName || animalNameInput.value,
             blurb: animalBlurb ? animalBlurb.textContent : "",
-            apiKey: openaiKeyInput.value,
+            provider: provider,
+            apiKey: openaiKeyInput ? openaiKeyInput.value : "",
           });
-          if (aiImage) aiImage.src = result.url;
+          if (aiImage) {
+            aiImage.src = result.url;
+            aiImage.onload = function () {
+              setImageGenStatus(
+                provider === "free"
+                  ? "Free preview ready (quality varies; OpenAI is sharper when you want it)."
+                  : "Preview ready."
+              );
+            };
+          }
           if (aiImageWrap) aiImageWrap.hidden = false;
           if (aiImagePrompt) {
             aiImagePrompt.textContent =
               "Prompt used: " + (result.revisedPrompt || result.prompt);
           }
-          setImageGenStatus("Preview ready.");
+          if (!aiImage) {
+            setImageGenStatus("Preview ready.");
+          }
         } catch (err) {
           setImageGenStatus(
             (err && err.message) || "Could not generate image.",
