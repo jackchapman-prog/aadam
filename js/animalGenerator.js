@@ -473,18 +473,18 @@
     // Note: "Deer" itself uses dangling chibi biped (buildChibiDeer) — this path is fox/horse/etc.
     // Elephant: stocky pillar legs, almost no neck, big head — not fox stilts.
     const isElephant = !!f.trunk;
-    const headRatio = f.longNeck ? 0.36 : isElephant ? 0.42 : 0.4;
+    const headRatio = f.longNeck ? 0.36 : isElephant ? 0.44 : 0.4;
     const headD = balancedHeadDiameter(H, headScale, headRatio);
     const legH =
-      (isElephant ? H * 0.28 : f.longNeck ? H * 0.32 : H * 0.37) * legScale;
+      (isElephant ? H * 0.22 : f.longNeck ? H * 0.32 : H * 0.37) * legScale;
     const bodyThick =
-      (isElephant ? H * 0.32 : f.longNeck ? H * 0.22 : H * 0.25) *
+      (isElephant ? H * 0.36 : f.longNeck ? H * 0.22 : H * 0.25) *
       bodyThickScale;
-    const bodyLen = H * (isElephant ? 0.38 : 0.42) * bodyLengthScale;
+    const bodyLen = H * (isElephant ? 0.32 : 0.42) * bodyLengthScale;
     const neckH =
-      (isElephant ? H * 0.02 : f.longNeck ? H * 0.2 : H * 0.07) * neckScale;
+      (isElephant ? H * 0.01 : f.longNeck ? H * 0.2 : H * 0.07) * neckScale;
     const topBits = f.antlers || f.horns ? H * 0.16 : H * 0.03;
-    const legDia = isElephant ? H * 0.14 : H * 0.08;
+    const legDia = isElephant ? H * 0.16 : H * 0.08;
     const designerDeer = false; // Deer animal now uses buildChibiDeer; keep false here
 
     const stack = [];
@@ -650,12 +650,12 @@
           label: "Trunk",
           shape: "cylinder",
           geometry: "tapered tube that hangs and curves slightly",
-          diameterIn: headD * 0.22,
-          heightIn: headD * 0.95,
+          diameterIn: headD * 0.3,
+          heightIn: headD * 1.2,
           count: 1,
           finishNotes: [
             "Stuff lightly so it stays bendy. Taper toward the tip.",
-            "Sew to the center of the face so it hangs below the chin.",
+            "Sew to the center of the face so it hangs below the chin and curls a little.",
           ],
         });
         parts.push({
@@ -663,8 +663,8 @@
           label: "Tusk",
           shape: "cone",
           geometry: "short cream cone",
-          diameterIn: headD * 0.08,
-          heightIn: headD * 0.28,
+          diameterIn: headD * 0.1,
+          heightIn: headD * 0.35,
           count: 2,
           finishNotes: ["Cream/ivory. Sew beside the trunk base, angling slightly outward."],
         });
@@ -694,13 +694,13 @@
           key: "ear",
           label: "Ear (floppy)",
           shape: "dome",
-          geometry: "large flat oval flap",
-          diameterIn: headD * 0.9,
-          heightIn: headD * 0.12,
+          geometry: "huge flat oval flap — bigger than the head",
+          diameterIn: headD * 1.25,
+          heightIn: headD * 0.1,
           count: 2,
           finishNotes: [
-            "Work flat (or lightly stuffed pancake). These read as elephant ears — wide and thin.",
-            "Sew to the sides of the head so they hang down and forward a little.",
+            "Work flat (pancake). Elephant ears must read HUGE — wider than the head.",
+            "Sew to the sides of the head so they fan out and hang slightly forward.",
           ],
         });
       } else {
