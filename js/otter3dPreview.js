@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine33";
+var BUILD_TAG = "engine34";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -330,22 +330,27 @@ function buildOtterGroup(m) {
     bodyRz * 0.85
   );
 
-  // Tail: ONE tapered cone — tip→base diameters from stitch counts, length from rounds/RPI
+  // Tail backrest: thick BASE sewn LOW on the rump; tip leans UP behind the body
+  // (matches assembly: "sew low on the back so the thick base props the body")
   const tailBaseR = u(m.tailBaseD / 2);
   const tipR = u(m.tailTipD / 2);
   const tLen = u(m.tailLen);
-  const tailGeo = new THREE.CylinderGeometry(tipR, tailBaseR, tLen, 20, 1, false);
-  const tailMesh = new THREE.Mesh(tailGeo, deep);
-  // Tip points up/back; base sits low on the rump
-  tailMesh.position.set(
-    0,
-    bodyY + tLen * 0.15,
-    -bodyRz - tLen * 0.22
+  const tailGroup = new THREE.Group();
+  // CylinderGeometry(radiusTop, radiusBottom): tip at +Y, thick base at -Y
+  const tailMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(tipR, tailBaseR, tLen, 20, 1, false),
+    deep
   );
-  tailMesh.rotation.x = 0.85;
+  // Shift so the BASE (local -Y) sits at the group origin (sew point)
+  tailMesh.position.y = tLen / 2;
   tailMesh.castShadow = true;
   tailMesh.receiveShadow = true;
-  group.add(tailMesh);
+  tailGroup.add(tailMesh);
+  // Sew point: lower rear of body (not mid/upper back)
+  tailGroup.position.set(0, bodyY - bodyRy * 0.42, -bodyRz * 0.88);
+  // Tip leans up and slightly back (−X rotation moves +Y toward −Z)
+  tailGroup.rotation.x = -0.48;
+  group.add(tailGroup);
 
   // Paddle feet — oval sole size from chain/SPI
   const pLen = u(m.paddleLen / 2);
