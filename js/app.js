@@ -17,6 +17,13 @@
   const refClear = document.getElementById("ref-clear");
   const refStatus = document.getElementById("ref-status");
   const refCanvas = document.getElementById("ref-canvas");
+  const openaiKeyInput = document.getElementById("openai-api-key");
+  const genImageBtn = document.getElementById("gen-image-btn");
+  const clearApiKeyBtn = document.getElementById("clear-api-key-btn");
+  const imageGenStatus = document.getElementById("image-gen-status");
+  const aiImageWrap = document.getElementById("ai-image-wrap");
+  const aiImage = document.getElementById("ai-image");
+  const aiImagePrompt = document.getElementById("ai-image-prompt");
 
   let photoMetrics = null;
 
@@ -1067,6 +1074,70 @@
     previewRecipe();
   });
 
+  function setImageGenStatus(text, isError) {
+    if (!imageGenStatus) return;
+    imageGenStatus.textContent = text || "";
+    imageGenStatus.hidden = !text;
+    imageGenStatus.classList.toggle("is-error", !!isError);
+  }
+
+  function initImageGenUi() {
+    if (!window.AmigurumiImageGen || !openaiKeyInput) return;
+    const saved = window.AmigurumiImageGen.getApiKey();
+    if (saved) openaiKeyInput.value = saved;
+
+    openaiKeyInput.addEventListener("change", function () {
+      window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
+    });
+
+    if (clearApiKeyBtn) {
+      clearApiKeyBtn.addEventListener("click", function () {
+        openaiKeyInput.value = "";
+        window.AmigurumiImageGen.setApiKey("");
+        setImageGenStatus("Saved API key cleared on this device.");
+      });
+    }
+
+    if (genImageBtn) {
+      genImageBtn.addEventListener("click", async function () {
+        if (!window.AmigurumiImageGen) {
+          setImageGenStatus("Image module missing.", true);
+          return;
+        }
+        window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
+        const req = readPatternRequest();
+        if (!req) {
+          setImageGenStatus("Could not build pattern request from the form.", true);
+          return;
+        }
+        genImageBtn.disabled = true;
+        setImageGenStatus("Generating plush preview with DALL·E 3…");
+        try {
+          const result = await window.AmigurumiImageGen.generatePlushImage({
+            patternRequest: req,
+            displayName: req._displayName || animalNameInput.value,
+            blurb: animalBlurb ? animalBlurb.textContent : "",
+            apiKey: openaiKeyInput.value,
+          });
+          if (aiImage) aiImage.src = result.url;
+          if (aiImageWrap) aiImageWrap.hidden = false;
+          if (aiImagePrompt) {
+            aiImagePrompt.textContent =
+              "Prompt used: " + (result.revisedPrompt || result.prompt);
+          }
+          setImageGenStatus("Preview ready.");
+        } catch (err) {
+          setImageGenStatus(
+            (err && err.message) || "Could not generate image.",
+            true
+          );
+        } finally {
+          genImageBtn.disabled = false;
+        }
+      });
+    }
+  }
+
   copyBtn.addEventListener("click", function () {
     const text = patternText.textContent;
     if (!text) return;
@@ -1088,6 +1159,7 @@
   });
 
   fillQuickPicks();
+  initImageGenUi();
   previewRecipe();
 
   try {

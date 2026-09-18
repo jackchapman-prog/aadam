@@ -248,6 +248,32 @@ label.grow {
   margin-top: 1.25rem;
 }
 
+.image-gen {
+  margin-top: 1.25rem;
+}
+
+.image-gen-actions {
+  align-items: center;
+}
+
+.ai-image-wrap {
+  margin-top: 0.75rem;
+}
+
+.ai-image-wrap img {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #f7f3ec;
+}
+
+#openai-api-key {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .output-header {
   display: flex;
   align-items: center;
