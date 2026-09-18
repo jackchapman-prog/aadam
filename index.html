@@ -9,7 +9,7 @@
   <body>
     <main class="page">
       <header class="header">
-        <p class="eyebrow">AADAM - build engine42</p>
+        <p class="eyebrow">AADAM - build engine43</p>
         <h1>Amigurumi Pattern Maker</h1>
         <p class="lede">
         Enter gauge, yarn, and hook. Type an animal. The app sketches it as
@@ -237,14 +237,22 @@
         <button type="submit" class="primary">Generate pattern</button>
       </form>
 
+      <section id="output" class="output" hidden>
+        <div class="output-header">
+          <h2 id="output-title">Pattern</h2>
+          <button type="button" id="copy-btn" class="ghost">Copy</button>
+        </div>
+        <pre id="pattern-text" class="pattern-text"></pre>
+      </section>
+
       <section id="image-preview-panel" class="form image-gen">
         <fieldset>
           <legend>Plush preview</legend>
           <p class="hint">
-            <strong>3D plush</strong> builds a recipe-sized model for any quick-pick
-            animal (same inches as the pattern). 2D pattern draw is also accurate.
-            AI photo guesses are optional and often wrong.
-            <span class="hint">App build: engine42</span>
+            Generate the written pattern first. Then use a preview below — it reads
+            that same recipe (inches / parts). <strong>3D</strong> and
+            <strong>2D pattern draw</strong> follow the recipe; AI photo guesses are optional.
+            <span class="hint">App build: engine43</span>
           </p>
           <div class="field-row">
             <label>
@@ -271,14 +279,16 @@
             </label>
           </div>
           <div class="field-row image-gen-actions">
-            <button type="button" id="gen-image-btn" class="primary">
-              Draw pattern preview
+            <button type="button" id="gen-image-btn" class="primary" disabled>
+              Show 3D plush
             </button>
             <button type="button" id="clear-api-key-btn" class="ghost">
               Clear saved key
             </button>
           </div>
-          <p id="image-gen-status" class="hint ref-status" hidden></p>
+          <p id="image-gen-status" class="hint ref-status">
+            Generate a pattern above first — then this button unlocks.
+          </p>
           <div id="ai-image-wrap" class="ai-image-wrap" hidden>
             <div id="otter-3d-host" class="otter-3d-host" hidden></div>
             <canvas
@@ -293,14 +303,6 @@
           </div>
         </fieldset>
       </section>
-
-      <section id="output" class="output" hidden>
-        <div class="output-header">
-          <h2 id="output-title">Pattern</h2>
-          <button type="button" id="copy-btn" class="ghost">Copy</button>
-        </div>
-        <pre id="pattern-text" class="pattern-text"></pre>
-      </section>
     </main>
 
     <script type="importmap">
@@ -311,15 +313,15 @@
         }
       }
     </script>
-    <script src="js/shapes.js?v=engine42"></script>
-    <script src="js/patternRequest.js?v=engine42"></script>
-    <script src="js/animalGenerator.js?v=engine42"></script>
-    <script src="js/patternMath.js?v=engine42"></script>
-    <script src="js/photoAnalysis.js?v=engine42"></script>
-    <script src="js/promptCompiler.js?v=engine42"></script>
-    <script src="js/patternPreview.js?v=engine42"></script>
-    <script src="js/imageGen.js?v=engine42"></script>
-    <script type="module" src="js/plush3dPreview.js?v=engine42"></script>
-    <script src="js/app.js?v=engine42"></script>
+    <script src="js/shapes.js?v=engine43"></script>
+    <script src="js/patternRequest.js?v=engine43"></script>
+    <script src="js/animalGenerator.js?v=engine43"></script>
+    <script src="js/patternMath.js?v=engine43"></script>
+    <script src="js/photoAnalysis.js?v=engine43"></script>
+    <script src="js/promptCompiler.js?v=engine43"></script>
+    <script src="js/patternPreview.js?v=engine43"></script>
+    <script src="js/imageGen.js?v=engine43"></script>
+    <script type="module" src="js/plush3dPreview.js?v=engine43"></script>
+    <script src="js/app.js?v=engine43"></script>
   </body>
 </html>

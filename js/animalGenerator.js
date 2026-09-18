@@ -324,7 +324,9 @@
     }
     if (includesAny(name, ["elephant", "mammoth"])) {
       features.trunk = true;
+      features.bigEars = true;
       features.shortSnout = false;
+      features.bushyTail = false;
       plan = "quadruped";
     }
     if (includesAny(name, ["rhino", "rhinoceros", "bull", "bison", "ram", "goat"])) {
@@ -469,14 +471,20 @@
 
     // Reference deer (10" tall standing quadrupeds): head ~4.0", legs ~3.7", body ~2.5", neck ~0.7"
     // Note: "Deer" itself uses dangling chibi biped (buildChibiDeer) — this path is fox/horse/etc.
-    const headRatio = f.longNeck ? 0.36 : 0.4;
+    // Elephant: stocky pillar legs, almost no neck, big head — not fox stilts.
+    const isElephant = !!f.trunk;
+    const headRatio = f.longNeck ? 0.36 : isElephant ? 0.42 : 0.4;
     const headD = balancedHeadDiameter(H, headScale, headRatio);
-    const legH = (f.longNeck ? H * 0.32 : H * 0.37) * legScale;
-    const bodyThick = (f.longNeck ? H * 0.22 : H * 0.25) * bodyThickScale;
-    const bodyLen = H * 0.42 * bodyLengthScale;
-    const neckH = (f.longNeck ? H * 0.2 : H * 0.07) * neckScale;
+    const legH =
+      (isElephant ? H * 0.28 : f.longNeck ? H * 0.32 : H * 0.37) * legScale;
+    const bodyThick =
+      (isElephant ? H * 0.32 : f.longNeck ? H * 0.22 : H * 0.25) *
+      bodyThickScale;
+    const bodyLen = H * (isElephant ? 0.38 : 0.42) * bodyLengthScale;
+    const neckH =
+      (isElephant ? H * 0.02 : f.longNeck ? H * 0.2 : H * 0.07) * neckScale;
     const topBits = f.antlers || f.horns ? H * 0.16 : H * 0.03;
-    const legDia = H * 0.08;
+    const legDia = isElephant ? H * 0.14 : H * 0.08;
     const designerDeer = false; // Deer animal now uses buildChibiDeer; keep false here
 
     const stack = [];
@@ -502,7 +510,12 @@
             "Work the last ~15% of rounds in dark brown for hooves.",
             "Stuff firmly. Attach at the four corners of the body underside so it stands.",
           ]
-        : ["Stuff firmly. Sew under the body so the animal stands evenly."],
+        : isElephant
+          ? [
+              "Pillar legs — thicker tubes, not stilts. Stuff firmly.",
+              "Sew under the four corners of the body so it stands.",
+            ]
+          : ["Stuff firmly. Sew under the body so the animal stands evenly."],
     });
 
     parts.push({
@@ -520,7 +533,12 @@
             "Cream belly/chest panel (tapestry, intarsia, or sew-on oval).",
             "Add 6–8 small cream spot circles on the back/flanks.",
           ]
-        : ["Keep the torso long; neck is a short stump for the head."],
+        : isElephant
+          ? [
+              "Stocky horizontal oval (chest to rump) — thicker than a fox torso.",
+              "Almost no neck stump; sew the large head flush to the chest.",
+            ]
+          : ["Keep the torso long; neck is a short stump for the head."],
     });
 
     if (designerDeer) {
@@ -619,18 +637,36 @@
           key: "head",
           label: "Head",
           shape: "sphere",
-          geometry: "sphere",
+          geometry: "sphere (large, almost no neck)",
           diameterIn: headD,
           count: 1,
+          finishNotes: [
+            "Grey. Place safety eyes on the lower half of the face, fairly wide.",
+            "Sew the trunk centered on the lower face before attaching the head.",
+          ],
         });
         parts.push({
           key: "trunk",
           label: "Trunk",
           shape: "cylinder",
-          geometry: "cylinder",
-          diameterIn: headD * 0.18,
-          heightIn: headD * 0.55,
+          geometry: "tapered tube that hangs and curves slightly",
+          diameterIn: headD * 0.22,
+          heightIn: headD * 0.95,
           count: 1,
+          finishNotes: [
+            "Stuff lightly so it stays bendy. Taper toward the tip.",
+            "Sew to the center of the face so it hangs below the chin.",
+          ],
+        });
+        parts.push({
+          key: "tusk",
+          label: "Tusk",
+          shape: "cone",
+          geometry: "short cream cone",
+          diameterIn: headD * 0.08,
+          heightIn: headD * 0.28,
+          count: 2,
+          finishNotes: ["Cream/ivory. Sew beside the trunk base, angling slightly outward."],
         });
       } else {
         parts.push({
@@ -652,6 +688,20 @@
           diameterIn: headD * 0.12,
           heightIn: headD * 0.28,
           count: 2,
+        });
+      } else if (f.bigEars || f.trunk) {
+        parts.push({
+          key: "ear",
+          label: "Ear (floppy)",
+          shape: "dome",
+          geometry: "large flat oval flap",
+          diameterIn: headD * 0.9,
+          heightIn: headD * 0.12,
+          count: 2,
+          finishNotes: [
+            "Work flat (or lightly stuffed pancake). These read as elephant ears — wide and thin.",
+            "Sew to the sides of the head so they hang down and forward a little.",
+          ],
         });
       } else {
         parts.push({
@@ -719,12 +769,15 @@
       }
       parts.push({
         key: "tail",
-        label: f.bushyTail ? "Bushy tail" : "Tail",
+        label: f.bushyTail ? "Bushy tail" : f.trunk ? "Rope tail" : "Tail",
         shape: f.bushyTail ? "sphere" : "cylinder",
-        geometry: f.bushyTail ? "sphere" : "cylinder",
-        diameterIn: f.bushyTail ? headD * 0.2 : headD * 0.1,
-        heightIn: f.bushyTail ? undefined : headD * 0.18,
+        geometry: f.bushyTail ? "sphere" : f.trunk ? "thin rope with tuft tip" : "cylinder",
+        diameterIn: f.bushyTail ? headD * 0.2 : f.trunk ? headD * 0.06 : headD * 0.1,
+        heightIn: f.bushyTail ? undefined : f.trunk ? headD * 0.35 : headD * 0.18,
         count: 1,
+        finishNotes: f.trunk
+          ? ["Thin tube. Optional tiny fringe at the tip. Sew at the rump."]
+          : undefined,
       });
     }
 

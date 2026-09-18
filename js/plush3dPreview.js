@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine42";
+var BUILD_TAG = "engine43";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -284,6 +284,7 @@ function layoutFamily(animal) {
   if (f.floppyWaterMammal || name.indexOf("otter") >= 0) return "otter";
   if (plan === "biped" || name.indexOf("deer") >= 0) return "deer";
   if (name.indexOf("unicorn") >= 0 || (f.horns && f.mane && plan === "sitting")) return "unicorn";
+  if (f.trunk || name.indexOf("elephant") >= 0 || name.indexOf("mammoth") >= 0) return "elephant";
   if (plan === "quadruped") return "quad";
   if (plan === "bird") return "bird";
   if (plan === "fish") return "fish";
@@ -720,6 +721,7 @@ function buildSittingGroup(animal, gauge, mats) {
   function u(v) {
     return v * U;
   }
+  const name = String(animal.name || "").toLowerCase();
   const headP = partByKey(animal, "head");
   const bodyP = partByKey(animal, "body");
   const armP = partByKey(animal, "arm");
@@ -730,8 +732,14 @@ function buildSittingGroup(animal, gauge, mats) {
   const hornP = partByKey(animal, "horn");
   const cap = (bodyP && bodyP.maxStitchCap) || (animal.yarnProfile && animal.yarnProfile.maxStitchCap);
 
-  // Chinchilla: one-piece body+head
-  const isChin = String(animal.name || "").toLowerCase().indexOf("chinchilla") >= 0;
+  const isChin = name.indexOf("chinchilla") >= 0;
+  const isHippo =
+    name.indexOf("hippo") >= 0 ||
+    (headP && String(headP.shape || "").indexOf("hippo") >= 0);
+  const isCat = name.indexOf("cat") >= 0 || name.indexOf("kitten") >= 0;
+  const isTeddy = name.indexOf("teddy") >= 0 || name.indexOf("bear") >= 0;
+  const isBunny = name.indexOf("bunny") >= 0 || name.indexOf("rabbit") >= 0;
+
   let bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.38), spi, cap);
   let bodyH = inch(bodyP, "heightIn", bodyD * 0.95);
   let headD = finishedDiameterIn(
@@ -745,15 +753,30 @@ function buildSittingGroup(animal, gauge, mats) {
   const bodyRx = u(bodyD / 2);
   const bodyRy = u(bodyH / 2);
   const bodyY = bodyRy;
-  addEllipsoid(group, mats.main, bodyRx, bodyRy, bodyRx * 0.95, 0, bodyY, 0);
+  addEllipsoid(group, mats.main, bodyRx * (isHippo ? 1.1 : 1), bodyRy, bodyRx * 0.95, 0, bodyY, 0);
   addEllipsoid(group, mats.cream, bodyRx * 0.65, bodyRy * 0.6, u(0.18), 0, bodyY, bodyRx * 0.8);
 
   const headR = u(headD / 2);
   const headY = isChin ? bodyY + bodyRy * 0.55 : bodyY + bodyRy + headR * 0.75;
   if (!isChin || headP) {
-    addEllipsoid(group, mats.main, headR, headR * 0.95, headR * 0.95, 0, headY, u(0.05));
+    addEllipsoid(group, mats.main, headR * (isHippo ? 1.05 : 1), headR * 0.95, headR * 0.95, 0, headY, u(0.05));
   }
-  if (snoutP) {
+
+  // Hippo: continuous cream muzzle from head.lengthIn (Harry chain-oval → head)
+  if (isHippo) {
+    const muzzleLen = inch(headP, "lengthIn", headD * 0.45);
+    const mR = u(Math.min(muzzleLen, headD * 0.55) / 2);
+    addEllipsoid(
+      group,
+      mats.cream,
+      mR * 1.15,
+      mR * 0.75,
+      mR * 1.35,
+      0,
+      headY - headR * 0.25,
+      headR * 0.55 + mR * 0.6
+    );
+  } else if (snoutP || isTeddy) {
     const sd = u(inch(snoutP, "diameterIn", headD * 0.35) / 2);
     addEllipsoid(group, mats.cream, sd, sd * 0.7, sd * 1.1, 0, headY - headR * 0.15, headR * 0.85);
   }
@@ -771,12 +794,31 @@ function buildSittingGroup(animal, gauge, mats) {
   });
 
   if (earP) {
-    const longEar = String(animal.name || "").toLowerCase().indexOf("bunny") >= 0;
     const eD = u(inch(earP, "diameterIn", headD * 0.25) / 2);
-    const eH = u(inch(earP, "heightIn", longEar ? headD * 0.7 : headD * 0.28));
-    if (longEar) {
+    const eH = u(inch(earP, "heightIn", isBunny ? headD * 0.7 : headD * 0.28));
+    if (isBunny) {
       [-1, 1].forEach(function (side) {
         addCylinder(group, mats.main, eD * 0.6, eD, eH, side * headR * 0.45, headY + headR * 0.5 + eH * 0.4, -headR * 0.1, 0.15, side * 0.1);
+      });
+    } else if (isCat) {
+      // Rule C cone ears from recipe diameter
+      [-1, 1].forEach(function (side) {
+        addCylinder(
+          group,
+          mats.main,
+          0.01,
+          eD,
+          eH * 1.2,
+          side * headR * 0.55,
+          headY + headR * 0.55 + eH * 0.35,
+          -headR * 0.05,
+          0.1,
+          side * -0.25
+        );
+      });
+    } else if (isChin) {
+      [-1, 1].forEach(function (side) {
+        addEllipsoid(group, mats.main, eD * 1.1, eD * 0.35, eD * 0.9, side * headR * 0.75, headY + headR * 0.35, 0);
       });
     } else {
       [-1, 1].forEach(function (side) {
@@ -787,11 +829,11 @@ function buildSittingGroup(animal, gauge, mats) {
 
   if (tailP) {
     const bushy = (animal.features && animal.features.bushyTail) || inch(tailP, "diameterIn", 0) > headD * 0.35;
-    if (bushy || (tailP.shape && String(tailP.shape).indexOf("sphere") >= 0)) {
+    if (bushy || (tailP.shape && String(tailP.shape).indexOf("sphere") >= 0) || isChin) {
       const td = u(inch(tailP, "diameterIn", headD * 0.28) / 2);
       addEllipsoid(group, mats.deep, td, td, td, 0, bodyY - bodyRy * 0.2, -bodyRx * 0.95);
-    } else if (tailP.shape === "chain-tail") {
-      const th = u(inch(tailP, "lengthIn", 0.6));
+    } else if (tailP.shape === "chain-tail" || isHippo) {
+      const th = u(inch(tailP, "lengthIn", inch(tailP, "heightIn", 0.6)));
       addCylinder(group, mats.deep, u(0.06), u(0.08), th, 0, bodyY - bodyRy * 0.3, -bodyRx * 0.9, 0.6, 0);
     } else {
       const td = u(inch(tailP, "diameterIn", headD * 0.15) / 2);
@@ -812,14 +854,14 @@ function buildSittingGroup(animal, gauge, mats) {
     addCylinder(group, mats.accent, hd * 0.3, hd, hh, 0, headY + headR * 0.7 + hh * 0.4, headR * 0.1, -0.2, 0);
   }
 
-  // Spiral mane hint for unicorn
   if (partByKey(animal, "mane")) {
     addEllipsoid(group, mats.accent, headR * 0.35, headR * 0.5, headR * 0.25, -headR * 0.2, headY + headR * 0.2, -headR * 0.7);
   }
 
   addEyes(group, headR, headY, u(0.05), mats.black);
   group.position.y = -u(bodyH * 0.3);
-  return { group: group, label: "sitting - recipe inches" };
+  const cue = isHippo ? "hippo muzzle" : isCat ? "cone ears" : isChin ? "one-piece" : isTeddy ? "snout" : isBunny ? "long ears" : "recipe";
+  return { group: group, label: "sitting - " + cue + " inches" };
 }
 
 function buildDeerGroup(animal, gauge, mats) {
@@ -1046,10 +1088,10 @@ function buildDeerGroup(animal, gauge, mats) {
   };
 }
 
-function buildQuadGroup(animal, gauge, mats) {
+function buildElephantGroup(animal, gauge, mats) {
   const H = animal.designedHeightIn || 10;
   const spi = gauge.spi;
-  const U = 2.0 / H;
+  const U = 2.05 / H;
   function u(v) {
     return v * U;
   }
@@ -1057,34 +1099,231 @@ function buildQuadGroup(animal, gauge, mats) {
   const headP = partByKey(animal, "head");
   const legP = partByKey(animal, "leg");
   const earP = partByKey(animal, "ear");
-  const tailP = partByKey(animal, "tail");
   const trunkP = partByKey(animal, "trunk");
+  const tuskP = partByKey(animal, "tusk");
+  const tailP = partByKey(animal, "tail");
+  const cap = (bodyP && bodyP.maxStitchCap) || (animal.yarnProfile && animal.yarnProfile.maxStitchCap);
+
+  const bodyLen = inch(bodyP, "lengthIn", H * 0.38);
+  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.32), spi, cap);
+  const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.42), spi, cap);
+  const legD = finishedDiameterIn(inch(legP, "diameterIn", H * 0.14), spi, cap);
+  const legH = inch(legP, "heightIn", H * 0.28);
+  const earD = inch(earP, "diameterIn", headD * 0.9);
+  const earThick = inch(earP, "heightIn", headD * 0.12);
+  const trunkBaseD = inch(trunkP, "diameterIn", headD * 0.22);
+  const trunkLen = inch(trunkP, "heightIn", headD * 0.95);
+
+  const group = new THREE.Group();
+  const bRx = u(bodyLen / 2);
+  const bRy = u(bodyD / 2);
+  const bellyY = u(legH) + bRy * 0.85;
+  // Stocky horizontal oval from recipe length × diameter
+  addEllipsoid(group, mats.main, bRx, bRy, bRy * 0.95, 0, bellyY, 0);
+  addEllipsoid(group, mats.cream, bRx * 0.55, bRy * 0.55, u(0.12), 0, bellyY - bRy * 0.1, bRy * 0.85);
+
+  // Four pillar legs (recipe diameter + height)
+  const legR = u(legD / 2);
+  const legLen = u(legH);
+  const stance = [
+    [0.55, 0.5],
+    [0.55, -0.5],
+    [-0.55, 0.5],
+    [-0.55, -0.5],
+  ];
+  stance.forEach(function (xz) {
+    addCylinder(group, mats.main, legR * 0.95, legR * 1.05, legLen, bRx * xz[0], legLen * 0.5, bRy * xz[1], 0, 0);
+  });
+
+  // Large head flush to chest (almost no neck)
+  const headR = u(headD / 2);
+  const headX = bRx * 0.85 + headR * 0.35;
+  const headY = bellyY + bRy * 0.15;
+  addEllipsoid(group, mats.main, headR * 1.05, headR, headR * 0.95, headX, headY, 0);
+
+  // Huge flat oval ear flaps from recipe diameter
+  const eW = u(earD / 2);
+  const eT = u(Math.max(earThick, headD * 0.08) / 2);
+  [-1, 1].forEach(function (side) {
+    const ear = addEllipsoid(
+      group,
+      mats.main,
+      eT,
+      eW * 0.95,
+      eW * 0.75,
+      headX - headR * 0.15,
+      headY - headR * 0.05,
+      side * (headR * 0.55 + eW * 0.35)
+    );
+    ear.rotation.y = side * 0.35;
+    ear.rotation.z = side * 0.2;
+    // Soft inner ear
+    const inner = addEllipsoid(
+      group,
+      mats.cream,
+      eT * 0.5,
+      eW * 0.65,
+      eW * 0.5,
+      headX - headR * 0.05,
+      headY - headR * 0.05,
+      side * (headR * 0.55 + eW * 0.25)
+    );
+    inner.rotation.y = side * 0.35;
+  });
+
+  // Curved trunk: 3 tapered segments hanging from face center (recipe length)
+  const tBase = u(trunkBaseD / 2);
+  const tLen = u(trunkLen);
+  const trunkRoot = new THREE.Group();
+  trunkRoot.position.set(headX + headR * 0.75, headY - headR * 0.25, 0);
+  trunkRoot.rotation.z = 0.65;
+  group.add(trunkRoot);
+  const segLen = tLen / 3;
+  let parent = trunkRoot;
+  for (let i = 0; i < 3; i++) {
+    const hinge = new THREE.Group();
+    if (i > 0) hinge.rotation.z = 0.28;
+    hinge.position.y = i === 0 ? 0 : -segLen;
+    parent.add(hinge);
+    const r0 = tBase * (1 - i * 0.22);
+    const r1 = tBase * (1 - (i + 1) * 0.22);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.02, r1), r0, segLen, 12), mats.main);
+    seg.position.y = -segLen * 0.5;
+    seg.castShadow = true;
+    hinge.add(seg);
+    parent = hinge;
+  }
+
+  // Cream tusks beside trunk
+  if (tuskP) {
+    const td = u(inch(tuskP, "diameterIn", headD * 0.08) / 2);
+    const th = u(inch(tuskP, "heightIn", headD * 0.28));
+    [-1, 1].forEach(function (side) {
+      const tusk = addCylinder(
+        group,
+        mats.cream,
+        td * 0.35,
+        td,
+        th,
+        headX + headR * 0.55,
+        headY - headR * 0.35,
+        side * headR * 0.28,
+        0.9,
+        side * -0.35
+      );
+      tusk.rotation.x = 0.4;
+    });
+  }
+
+  // Rope tail
+  if (tailP) {
+    const td = u(inch(tailP, "diameterIn", headD * 0.06) / 2);
+    const th = u(inch(tailP, "heightIn", headD * 0.35));
+    addCylinder(group, mats.deep, td * 0.6, td, th, -bRx * 0.9, bellyY - bRy * 0.2, 0, 1.0, 0);
+  }
+
+  addEyes(group, headR, headY, 0, mats.black);
+  group.children.forEach(function (ch) {
+    if (ch.material === mats.black && ch.geometry && ch.geometry.type === "SphereGeometry") {
+      ch.position.x = headX + headR * 0.55;
+      ch.position.y = headY + headR * 0.05;
+      ch.position.z = (ch.position.z >= 0 ? 1 : -1) * headR * 0.45;
+    }
+  });
+
+  group.position.y = -u(0.1);
+  group.rotation.y = 0.4;
+  return {
+    group: group,
+    label:
+      "elephant - trunk " +
+      trunkLen.toFixed(1) +
+      '" - ears " +
+      earD.toFixed(1) +
+      '" - pillars",
+  };
+}
+
+function buildQuadGroup(animal, gauge, mats) {
+  const H = animal.designedHeightIn || 10;
+  const spi = gauge.spi;
+  const U = 2.0 / H;
+  function u(v) {
+    return v * U;
+  }
+  const name = String(animal.name || "").toLowerCase();
+  const f = animal.features || {};
+  const bodyP = partByKey(animal, "body");
+  const headP = partByKey(animal, "head");
+  const legP = partByKey(animal, "leg");
+  const earP = partByKey(animal, "ear");
+  const tailP = partByKey(animal, "tail");
   const wingP = partByKey(animal, "wing");
+  const hornP = partByKey(animal, "horn");
   const cap = bodyP && bodyP.maxStitchCap;
 
   const bodyLen = inch(bodyP, "lengthIn", inch(bodyP, "heightIn", H * 0.45));
   const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.28), spi, cap);
   const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.28), spi, cap);
   const neckH = inch(bodyP, "heightIn", H * 0.15);
-  const longNeck = animal.features && animal.features.longNeck;
+  const longNeck = !!f.longNeck || name.indexOf("giraffe") >= 0;
+  const longSnout = !!f.longSnout || name.indexOf("fox") >= 0 || name.indexOf("wolf") >= 0;
+  const isFox = name.indexOf("fox") >= 0;
+  const isDragon = name.indexOf("dragon") >= 0;
 
   const group = new THREE.Group();
   const bRx = u(bodyLen / 2);
   const bRy = u(bodyD / 2);
-  addEllipsoid(group, mats.main, bRx, bRy, bRy * 0.9, 0, bRy * 1.6, 0);
+  const bodyY = u(inch(legP, "heightIn", H * 0.28)) * 0.95 + bRy * 0.15;
+  addEllipsoid(group, mats.main, bRx, bRy, bRy * 0.9, 0, bodyY, 0);
 
-  const neckLen = u(longNeck ? neckH : neckH * 0.4);
+  // Neck: giraffe uses full recipe neck height upright; others short stump
+  const neckLen = u(longNeck ? Math.max(neckH, H * 0.18) : neckH * 0.45);
+  let headX = bRx * 0.85;
+  let headY = bodyY + bRy * 0.35;
   if (neckLen > 0.05) {
-    addCylinder(group, mats.main, bRy * 0.45, bRy * 0.55, neckLen, bRx * 0.7, bRy * 1.6 + neckLen * 0.4, 0, 0, -1.0);
+    if (longNeck) {
+      const neck = addCylinder(
+        group,
+        mats.main,
+        bRy * 0.28,
+        bRy * 0.38,
+        neckLen,
+        bRx * 0.55,
+        bodyY + bRy * 0.5 + neckLen * 0.45,
+        0,
+        0,
+        -0.35
+      );
+      headX = bRx * 0.55 + neckLen * 0.25;
+      headY = bodyY + bRy * 0.5 + neckLen * 0.95;
+    } else {
+      addCylinder(group, mats.main, bRy * 0.4, bRy * 0.5, neckLen, bRx * 0.75, bodyY + bRy * 0.4, 0, 0, -0.9);
+      headX = bRx * 0.95 + u(headD / 2) * 0.2;
+      headY = bodyY + bRy * 0.35 + u(headD / 2) * 0.35;
+    }
   }
 
   const headR = u(headD / 2);
-  const headX = bRx * 0.95 + (longNeck ? neckLen * 0.6 : headR * 0.3);
-  const headY = bRy * 1.6 + (longNeck ? neckLen * 0.85 : headR * 0.4);
-  addEllipsoid(group, mats.main, headR * 1.1, headR, headR, headX, headY, 0);
+  addEllipsoid(group, mats.main, headR * (longSnout ? 0.95 : 1.1), headR, headR * 0.95, headX, headY, 0);
 
-  const snoutLen = inch(headP, "lengthIn", animal.features && animal.features.longSnout ? headD * 0.5 : headD * 0.25);
-  addEllipsoid(group, mats.cream, u(snoutLen / 2), headR * 0.45, headR * 0.45, headX + headR * 0.7, headY - headR * 0.1, 0);
+  // Snout from head.lengthIn (fox = pointed cream muzzle)
+  const snoutLen = inch(
+    headP,
+    "lengthIn",
+    longSnout ? headD * 0.55 : headD * 0.25
+  );
+  const snoutR = u(snoutLen / 2);
+  addEllipsoid(
+    group,
+    mats.cream,
+    snoutR * (longSnout ? 1.2 : 0.9),
+    headR * (longSnout ? 0.35 : 0.45),
+    headR * (longSnout ? 0.35 : 0.45),
+    headX + headR * 0.55 + snoutR * 0.5,
+    headY - headR * 0.12,
+    0
+  );
 
   const legD = u(inch(legP, "diameterIn", bodyD * 0.22) / 2);
   const legH = u(inch(legP, "heightIn", H * 0.28));
@@ -1100,39 +1339,63 @@ function buildQuadGroup(animal, gauge, mats) {
 
   if (earP) {
     const eD = u(inch(earP, "diameterIn", headD * 0.3) / 2);
-    [-1, 1].forEach(function (side) {
-      addEllipsoid(group, mats.main, eD * 0.6, eD, eD * 0.4, headX, headY + headR * 0.7, side * headR * 0.5);
-    });
-  }
-  if (tailP) {
-    const bushy = animal.features && animal.features.bushyTail;
-    const td = u(inch(tailP, "diameterIn", bodyD * 0.35) / 2);
-    if (bushy) {
-      addEllipsoid(group, mats.deep, td, td * 1.2, td, -bRx * 0.95, bRy * 1.5, 0);
+    if (isFox || longSnout) {
+      [-1, 1].forEach(function (side) {
+        addCylinder(
+          group,
+          mats.main,
+          0.01,
+          eD * 0.85,
+          eD * 1.6,
+          headX,
+          headY + headR * 0.55,
+          side * headR * 0.45,
+          0.15,
+          side * -0.2
+        );
+      });
     } else {
-      const th = u(inch(tailP, "heightIn", bodyD * 0.6));
-      addCylinder(group, mats.deep, td * 0.4, td, th, -bRx * 0.9, bRy * 1.4, 0, 1.1, 0);
+      [-1, 1].forEach(function (side) {
+        addEllipsoid(group, mats.main, eD * 0.6, eD, eD * 0.4, headX, headY + headR * 0.7, side * headR * 0.5);
+      });
     }
   }
-  if (trunkP) {
-    const td = u(inch(trunkP, "diameterIn", headD * 0.25) / 2);
-    const th = u(inch(trunkP, "heightIn", headD * 0.8));
-    addCylinder(group, mats.main, td * 0.7, td, th, headX + headR * 0.9, headY - th * 0.3, 0, 0.5, 0);
+
+  if (tailP) {
+    const bushy = f.bushyTail || isFox;
+    const td = u(inch(tailP, "diameterIn", bodyD * (bushy ? 0.45 : 0.25)) / 2);
+    if (bushy) {
+      addEllipsoid(group, mats.deep, td * 1.1, td * 1.4, td, -bRx * 0.95, bodyY, 0);
+      if (isFox) {
+        addEllipsoid(group, mats.cream, td * 0.55, td * 0.6, td * 0.55, -bRx * 1.15, bodyY - td * 0.2, 0);
+      }
+    } else {
+      const th = u(inch(tailP, "heightIn", bodyD * 0.6));
+      addCylinder(group, mats.deep, td * 0.4, td, th, -bRx * 0.9, bodyY - bRy * 0.2, 0, 1.1, 0);
+    }
   }
-  if (wingP) {
-    const wd = u(inch(wingP, "diameterIn", bodyD * 0.6) / 2);
+
+  if (wingP || isDragon) {
+    const wd = u(inch(wingP, "diameterIn", bodyD * 0.7) / 2);
     [-1, 1].forEach(function (side) {
-      addEllipsoid(group, mats.accent, wd * 0.3, wd * 0.8, wd, 0, bRy * 2.0, side * bRy * 1.1);
+      addEllipsoid(group, mats.accent, wd * 0.25, wd * 0.9, wd * 1.1, 0, bodyY + bRy * 0.4, side * (bRy + wd * 0.6));
+    });
+  }
+  if (hornP) {
+    const hd = u(inch(hornP, "diameterIn", 0.25) / 2);
+    const hh = u(inch(hornP, "heightIn", headD * 0.35));
+    const count = hornP.count === 1 ? [0] : [-1, 1];
+    count.forEach(function (side) {
+      addCylinder(group, mats.accent, 0.01, hd, hh, headX + headR * 0.1, headY + headR * 0.7, side * headR * 0.25, -0.2, 0);
     });
   }
   partsByKey(animal, "spike").forEach(function (sp, i) {
     const sd = u(inch(sp, "diameterIn", 0.2) / 2);
     const sh = u(inch(sp, "heightIn", 0.4));
-    addCylinder(group, mats.deep, 0.01, sd, sh, -bRx * 0.3 + i * u(0.25), bRy * 2.2, 0, 0, 0);
+    addCylinder(group, mats.deep, 0.01, sd, sh, -bRx * 0.3 + i * u(0.25), bodyY + bRy * 0.85, 0, 0, 0);
   });
 
   addEyes(group, headR, headY, 0, mats.black);
-  // shift eyes onto face +X
   group.children.forEach(function (ch) {
     if (ch.material === mats.black && ch.geometry && ch.geometry.type === "SphereGeometry") {
       ch.position.x = headX + headR * 0.55;
@@ -1142,7 +1405,8 @@ function buildQuadGroup(animal, gauge, mats) {
 
   group.position.y = -u(0.15);
   group.rotation.y = 0.35;
-  return { group: group, label: "quadruped - recipe inches" };
+  const cue = longNeck ? "giraffe neck" : isFox ? "fox snout+tail" : isDragon ? "wings" : "recipe";
+  return { group: group, label: "quad - " + cue + " inches" };
 }
 
 function buildBirdGroup(animal, gauge, mats) {
@@ -1293,6 +1557,7 @@ function buildPlushGroup(animal, gauge, faceStyle) {
   if (family === "otter") return Object.assign(buildOtterGroup(animal, gauge, faceStyle, mats), { family: family });
   if (family === "deer") return Object.assign(buildDeerGroup(animal, gauge, mats), { family: family });
   if (family === "unicorn") return Object.assign(buildUnicornGroup(animal, gauge, mats), { family: family });
+  if (family === "elephant") return Object.assign(buildElephantGroup(animal, gauge, mats), { family: family });
   if (family === "quad") return Object.assign(buildQuadGroup(animal, gauge, mats), { family: family });
   if (family === "bird") return Object.assign(buildBirdGroup(animal, gauge, mats), { family: family });
   if (family === "fish") return Object.assign(buildFishGroup(animal, gauge, mats), { family: family });

@@ -30,6 +30,8 @@
   const aiImagePrompt = document.getElementById("ai-image-prompt");
 
   let photoMetrics = null;
+  /** Last successfully written pattern — previews must use this, never invent first. */
+  let lastPatternResult = null;
 
   const yarnWeightLabels = {
     lace: "0 – Lace",
@@ -948,17 +950,46 @@
     return result;
   }
 
+  function syncPreviewUnlock() {
+    const ready = !!(
+      lastPatternResult &&
+      lastPatternResult.animal &&
+      lastPatternResult.text &&
+      String(patternText.textContent || "").trim()
+    );
+    if (genImageBtn) genImageBtn.disabled = !ready;
+    if (!imageGenStatus) return;
+    if (!ready) {
+      imageGenStatus.hidden = false;
+      imageGenStatus.classList.remove("is-error");
+      imageGenStatus.textContent =
+        "Generate a pattern above first — then this button unlocks.";
+    } else if (
+      /generate a pattern|generate the pattern first/i.test(
+        imageGenStatus.textContent || ""
+      )
+    ) {
+      imageGenStatus.hidden = false;
+      imageGenStatus.classList.remove("is-error");
+      imageGenStatus.textContent =
+        "Pattern ready — pick a preview mode and click the button.";
+    }
+  }
+
   function showPattern() {
     const result = generatePatternText();
     outputTitle.textContent = result.title;
     patternText.textContent = result.text;
     output.hidden = false;
+    lastPatternResult = result;
     animalBlurb.textContent =
       result.animal.description +
       " Body plan: " +
       result.animal.plan +
       ".";
     highlightQuickPick(result.animal.name);
+    syncPreviewUnlock();
+    return result;
   }
 
   function scheduleRegen() {
@@ -966,7 +997,11 @@
     clearTimeout(regenTimer);
     regenTimer = setTimeout(function () {
       previewRecipe();
-      if (!animalNameInput.value.trim()) return;
+      if (!animalNameInput.value.trim()) {
+        lastPatternResult = null;
+        syncPreviewUnlock();
+        return;
+      }
       try {
         showPattern();
       } catch (err) {
@@ -999,7 +1034,12 @@
     try {
       showPattern();
       output.scrollIntoView({ behavior: "smooth", block: "start" });
+      setImageGenStatus(
+        "Pattern ready — pick a preview mode below and click the button."
+      );
     } catch (err) {
+      lastPatternResult = null;
+      syncPreviewUnlock();
       alert(err.message || "Could not generate pattern.");
     }
   });
@@ -1159,6 +1199,20 @@
 
     if (genImageBtn) {
       genImageBtn.addEventListener("click", async function () {
+        // Hard rule: written pattern must exist before any preview image.
+        if (
+          !lastPatternResult ||
+          !lastPatternResult.animal ||
+          !String(patternText.textContent || "").trim()
+        ) {
+          setImageGenStatus(
+            "Generate the pattern first (button above), then try the preview.",
+            true
+          );
+          syncPreviewUnlock();
+          return;
+        }
+
         const req = readPatternRequest();
         if (!req) {
           setImageGenStatus("Could not build pattern request from the form.", true);
@@ -1171,21 +1225,32 @@
         genImageBtn.disabled = true;
 
         try {
-          let animal = null;
+          // Refresh pattern text first so preview always matches the latest form.
+          let resultPack;
           try {
-            const resultPack = generatePatternText();
-            animal = resultPack && resultPack.animal ? resultPack.animal : null;
-            if (resultPack && resultPack.text) {
-              patternText.textContent = resultPack.text;
-              output.hidden = false;
-              outputTitle.textContent = resultPack.title || "Pattern";
-            }
+            resultPack = showPattern();
           } catch (errGen) {
-            animal = null;
+            lastPatternResult = null;
+            syncPreviewUnlock();
+            setImageGenStatus(
+              (errGen && errGen.message) ||
+                "Pattern failed — fix the form, generate the pattern, then preview.",
+              true
+            );
+            return;
+          }
+
+          const animal = resultPack.animal;
+          if (!animal || !resultPack.text) {
+            setImageGenStatus(
+              "Pattern failed — generate the pattern first, then preview.",
+              true
+            );
+            return;
           }
 
           if (provider === "3d") {
-            setImageGenStatus("Building 3D plush from your pattern recipe…");
+            setImageGenStatus("Pattern ready — building 3D from that recipe…");
             const Plush3D = await waitForPlush3D(5000);
             const gauge = readGauge();
             if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
@@ -1217,14 +1282,12 @@
                 " · drag to orbit";
             }
             setImageGenStatus(
-              animal
-                ? "3D plush ready for " +
-                    (animal.name || "this animal") +
-                    " — sized from the pattern recipe."
-                : "3D shown with fallback sizes — generate a pattern first for recipe accuracy."
+              "3D plush ready for " +
+                (animal.name || "this animal") +
+                " — built after the pattern, sized from that recipe."
             );
           } else if (provider === "pattern") {
-            setImageGenStatus("Drawing construction preview from your pattern…");
+            setImageGenStatus("Pattern ready — drawing construction preview…");
             if (otter3dHost && otter3dHost._otter3d) {
               otter3dHost._otter3d.dispose();
             }
@@ -1250,7 +1313,7 @@
                 req.facialConstructionStyle;
             }
             setImageGenStatus(
-              "Pattern construction preview ready — this is what the app will crochet (not an AI photo)."
+              "Pattern construction preview ready — drawn after the written pattern."
             );
           } else {
             if (otter3dHost && otter3dHost._otter3d) {
@@ -1267,8 +1330,8 @@
             }
             setImageGenStatus(
               provider === "free"
-                ? "AI guess (free) — may not match your pattern…"
-                : "AI guess (OpenAI)…"
+                ? "Pattern ready — AI guess (free, may not match)…"
+                : "Pattern ready — AI guess (OpenAI)…"
             );
             const result = await window.AmigurumiImageGen.generatePlushImage({
               patternRequest: req,
@@ -1299,7 +1362,7 @@
             true
           );
         } finally {
-          genImageBtn.disabled = false;
+          syncPreviewUnlock();
         }
       });
     }
@@ -1328,10 +1391,12 @@
   fillQuickPicks();
   initImageGenUi();
   previewRecipe();
+  syncPreviewUnlock();
 
   try {
     showPattern();
   } catch (err) {
-    // Leave output hidden if defaults are invalid
+    lastPatternResult = null;
+    syncPreviewUnlock();
   }
 })();
