@@ -52,36 +52,38 @@
   function buildPrompt(patternRequest, extras) {
     extras = extras || {};
     if (global.AmigurumiPromptCompiler) {
-      // Free providers: compact identity-first prompt; OpenAI: full recipe prompt
       const forFree = extras.provider === "free" || extras.compact;
       return global.AmigurumiPromptCompiler.compileFromPatternRequest(
         patternRequest,
-        Object.assign({}, extras, { compact: !!forFree })
+        Object.assign({}, extras, {
+          compact: !!forFree,
+          freeSpeciesFirst: !!forFree,
+          provider: extras.provider || (forFree ? "free" : "openai"),
+        })
       );
     }
     const req = patternRequest || {};
     const name = extras.displayName || req.animalSpecies || "plush animal";
     return (
-      "EXACT SUBJECT: handmade crochet amigurumi " +
       name +
-      " only, not a generic teddy. Visible chenille single-crochet stitches."
+      " " +
+      name +
+      " amigurumi crochet plush only, not a teddy bear, chenille stitches"
     );
   }
 
-  /** Free test path — Pollinations image URL (no key, no billing). */
+  /** Free test path — Pollinations Flux (better prompt follow than default). */
   async function generateWithPollinations(prompt) {
-    // Keep URL reasonable; very long prompts can break some clients
-    const trimmed =
-      prompt.length > 1200 ? prompt.slice(0, 1200) : prompt;
+    // Short species-first prompts work; enhance=true often rewrites away from otter
+    const trimmed = prompt.length > 700 ? prompt.slice(0, 700) : prompt;
     const encoded = encodeURIComponent(trimmed);
     const seed = Date.now() % 1000000;
     const url =
       "https://image.pollinations.ai/prompt/" +
       encoded +
-      "?width=1024&height=1024&nologo=true&enhance=true&seed=" +
+      "?width=1024&height=1024&nologo=true&enhance=false&model=flux&seed=" +
       seed;
 
-    // Warm the URL (Pollinations generates on first fetch)
     const res = await fetch(url, { method: "GET", mode: "cors" });
     if (!res.ok) {
       throw new Error(

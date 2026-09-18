@@ -288,8 +288,84 @@
     return compact;
   }
 
+  /**
+   * Free-provider prompt: species name FIRST and REPEATED.
+   * Long prose gets ignored by weak free models (they invent pink teddies).
+   */
+  function compileFreeSpeciesFirstPrompt(settings) {
+    settings = settings || {};
+    const name = animalLabel(settings);
+    const species = String(
+      settings.animal || settings.animalSpecies || name
+    ).toLowerCase();
+    const inches = settings.targetHeightInches || 10;
+    const face =
+      settings.facialConstructionStyle ||
+      settings.muzzleStyle ||
+      "SEPARATE_PATCH";
+    const sil = settings.bodySilhouette || settings.posture || "";
+
+    let speciesBlock = "";
+    if (species === "otter" || /otter/.test(name.toLowerCase())) {
+      speciesBlock =
+        "brown baby river OTTER amigurumi, OTTER face with short otter snout, " +
+        "OTTER whisker dots, chocolate-brown chenille body, cream muzzle tip only, " +
+        "wide flat OTTER paddle feet pointing forward, thick tapered OTTER tail as backrest, " +
+        "narrow arms on upper chest, floppy seated otter pose";
+    } else if (species === "cat") {
+      speciesBlock =
+        "sitting kitten CAT amigurumi, pointed CAT ears, feline face, " +
+        "large round head, thin CAT tail, wide-hip seated cat pose";
+    } else if (species === "deer") {
+      speciesBlock =
+        "chibi DEER amigurumi, DEER face, branched antlers, cream deer muzzle, " +
+        "pear body, long thin dangling deer legs";
+    } else if (species === "hippo") {
+      speciesBlock =
+        "sitting HIPPO amigurumi, broad HIPPO muzzle, tiny ears, wide hippo body";
+    } else if (species === "bear") {
+      speciesBlock =
+        "sitting TEDDY BEAR amigurumi, round bear ears, sew-on snout, plump bear limbs";
+    } else {
+      speciesBlock =
+        name +
+        " amigurumi plush, clearly a " +
+        name +
+        ", species=" +
+        species;
+    }
+
+    let faceBit = "";
+    if (face === "CONTINUOUS_NOSE_FIRST") {
+      faceBit =
+        "cream-white snout band then solid brown head, safety eyes on the color line, no sew-on muzzle";
+    } else {
+      faceBit = "solid head with small cream sew-on muzzle patch";
+    }
+
+    const neg =
+      "NOT a teddy bear, NOT a cat, NOT a bunny, NOT pink, NOT white only, " +
+      "NOT a generic stuffed animal, NOT cartoon";
+
+    return (
+      speciesBlock +
+      ", " +
+      faceBit +
+      ", silhouette " +
+      sil +
+      ", about " +
+      inches +
+      " inches tall, chunky chenille yarn with visible single crochet stitches, " +
+      "handmade amigurumi product photo on wooden desk, " +
+      neg
+    );
+  }
+
   function compileFromPatternRequest(patternRequest, extras) {
     const settings = settingsFromPatternRequest(patternRequest, extras);
+    if (extras && (extras.freeSpeciesFirst || extras.provider === "free")) {
+      return compileFreeSpeciesFirstPrompt(settings);
+    }
     if (extras && extras.compact) {
       return compileCompactPrompt(settings);
     }
@@ -299,6 +375,7 @@
   global.AmigurumiPromptCompiler = {
     compileImagePrompt: compileImagePrompt,
     compileCompactPrompt: compileCompactPrompt,
+    compileFreeSpeciesFirstPrompt: compileFreeSpeciesFirstPrompt,
     compileFromPatternRequest: compileFromPatternRequest,
     settingsFromPatternRequest: settingsFromPatternRequest,
     CORE_STYLE: CORE_STYLE,
