@@ -1182,21 +1182,35 @@
             if (aiImage) aiImage.hidden = true;
             if (otter3dHost) otter3dHost.hidden = false;
             if (aiImageWrap) aiImageWrap.hidden = false;
+            const gauge = readGauge();
             Otter3D.createOtter3DPreview(otter3dHost, {
+              animal: animal,
+              patternRequest: req,
+              gauge: gauge,
               facialConstructionStyle: req.facialConstructionStyle,
               bodySilhouette: req.bodySilhouette,
               animalSpecies: req.animalSpecies,
             });
             if (aiImagePrompt) {
+              const h =
+                (animal && animal.designedHeightIn) ||
+                req.targetHeightInches ||
+                "?";
               aiImagePrompt.textContent =
-                "3D plush from recipe: " +
+                "3D from pattern recipe: " +
                 (req.animalSpecies || "otter") +
                 " · " +
+                h +
+                '" · SPI " +
+                gauge.spi +
+                " · " +
                 req.facialConstructionStyle +
-                " · drag to orbit, scroll to zoom";
+                " · drag to orbit";
             }
             setImageGenStatus(
-              "3D otter ready — drag to spin. Face path follows your pattern setting."
+              animal
+                ? "3D otter sized from your pattern parts (head/body/paddles/tail inches + stitch caps)."
+                : "3D otter shown with fallback sizes — generate a pattern first for recipe accuracy."
             );
           } else if (provider === "pattern") {
             setImageGenStatus("Drawing construction preview from your pattern…");

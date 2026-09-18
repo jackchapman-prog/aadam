@@ -1,11 +1,44 @@
 /**
- * Simple Three.js floppy-otter plush preview.
- * Built from Pattern Request (face path, silhouette) — not AI.
+ * Recipe-driven Three.js floppy-otter plush preview.
+ * Scales from animal.parts inches + gauge (SPI/RPI), including stitch caps.
  */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine29";
+var BUILD_TAG = "engine30";
+
+function snap6(n) {
+  return Math.max(6, Math.round(n / 6) * 6);
+}
+
+function stitchesForDiameter(diameterIn, spi) {
+  return snap6(Math.PI * diameterIn * spi);
+}
+
+function actualDiameterIn(stitches, spi) {
+  return stitches / (Math.PI * Math.max(0.5, spi));
+}
+
+function partByKey(animal, key) {
+  const parts = (animal && animal.parts) || [];
+  for (let i = 0; i < parts.length; i += 1) {
+    if (parts[i].key === key) return parts[i];
+  }
+  return null;
+}
+
+/**
+ * Convert recipe diameter → finished plush diameter after max-stitch cap
+ * (same idea as shapes.js otter head/body builders).
+ */
+function finishedDiameterIn(diameterIn, spi, maxStitchCap, opts) {
+  opts = opts || {};
+  let sts = stitchesForDiameter(diameterIn, spi);
+  if (opts.minSts != null) sts = Math.max(opts.minSts, sts);
+  if (maxStitchCap != null && sts > maxStitchCap) sts = snap6(maxStitchCap);
+  if (opts.snapAfterCap) sts = snap6(sts);
+  return actualDiameterIn(sts, spi);
+}
 
 function makeChenilleTexture(baseHex, stitchHex) {
   const size = 256;
@@ -16,11 +49,11 @@ function makeChenilleTexture(baseHex, stitchHex) {
   ctx.fillStyle = baseHex;
   ctx.fillRect(0, 0, size, size);
 
-  for (let i = 0; i < 2800; i++) {
+  for (let i = 0; i < 2400; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = 0.7 + Math.random() * 2.2;
-    const a = 0.05 + Math.random() * 0.14;
+    const r = 0.6 + Math.random() * 2;
+    const a = 0.05 + Math.random() * 0.12;
     ctx.fillStyle =
       Math.random() > 0.45
         ? "rgba(255,255,255," + a + ")"
@@ -29,40 +62,36 @@ function makeChenilleTexture(baseHex, stitchHex) {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
-
   ctx.strokeStyle = stitchHex;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.4;
+  ctx.lineWidth = 0.9;
+  ctx.globalAlpha = 0.35;
   for (let y = 0; y < size; y += 7) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(size, y + (Math.random() - 0.5));
+    ctx.lineTo(size, y);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2.4, 2.4);
+  tex.repeat.set(2.2, 2.2);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
-function yarnMat(hex, stitchHex, opts) {
-  opts = opts || {};
-  const map = makeChenilleTexture(hex, stitchHex || "rgba(0,0,0,0.18)");
+function yarnMat(hex, stitchHex) {
   return new THREE.MeshStandardMaterial({
-    map: map,
+    map: makeChenilleTexture(hex, stitchHex || "rgba(0,0,0,0.18)"),
     color: 0xffffff,
-    roughness: opts.roughness != null ? opts.roughness : 0.96,
+    roughness: 0.95,
     metalness: 0,
   });
 }
 
-function addEllipsoid(parent, mat, sx, sy, sz, x, y, z) {
-  const geo = new THREE.SphereGeometry(1, 36, 28);
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.scale.set(sx, sy, sz);
+function addEllipsoid(parent, mat, rx, ry, rz, x, y, z) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 28), mat);
+  mesh.scale.set(rx, ry, rz);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -70,116 +99,282 @@ function addEllipsoid(parent, mat, sx, sy, sz, x, y, z) {
   return mesh;
 }
 
-function buildOtterGroup(faceStyle) {
+/**
+ * Build inch metrics from the same recipe the pattern text uses.
+ */
+function recipeMetrics(animal, gauge, faceStyle) {
+  const spi = (gauge && gauge.spi) || 5;
+  const rpi = (gauge && gauge.rpi) || 5.5;
+  const H = (animal && animal.designedHeightIn) || 10;
+  const headP = partByKey(animal, "head");
+  const bodyP = partByKey(animal, "body");
+  const armP = partByKey(animal, "arm");
+  const legP = partByKey(animal, "leg");
+  const tailP = partByKey(animal, "tail");
+  const earP = partByKey(animal, "ear");
+  const muzzleP = partByKey(animal, "muzzle");
+  const cap =
+    (headP && headP.maxStitchCap) ||
+    (bodyP && bodyP.maxStitchCap) ||
+    (animal && animal.yarnProfile && animal.yarnProfile.maxStitchCap) ||
+    null;
+
+  const headD = finishedDiameterIn(
+    (headP && headP.diameterIn) || H * 0.4,
+    spi,
+    cap
+  );
+  const bodyD = finishedDiameterIn(
+    (bodyP && bodyP.diameterIn) || headD * 0.95,
+    spi,
+    cap,
+    { minSts: 30, snapAfterCap: true }
+  );
+  const bodyH =
+    (bodyP && bodyP.heightIn) || Math.max(bodyD * 0.9, H * 0.32);
+
+  // Arms: pattern forces ~0.7" tube (8–10 sts)
+  let armSts = Math.max(8, Math.min(10, stitchesForDiameter(0.7, spi)));
+  if (armSts % 2 === 1) armSts += 1;
+  if (armSts > 10) armSts = 10;
+  if (armSts < 8) armSts = 8;
+  const armD = actualDiameterIn(armSts, spi);
+  const armH = (armP && armP.heightIn) || headD * 0.32;
+
+  // Paddle: foundation chain length ≈ ch / SPI; oval widens a bit
+  const chLen = (legP && legP.chLen) || 7;
+  const paddleLen = Math.max(1.1, (chLen / spi) * 1.45);
+  const paddleWid = paddleLen * 0.62;
+  const paddleThick = Math.max(
+    0.28,
+    Math.min(0.55, ((legP && legP.maxRounds) || 7) / rpi * 0.45)
+  );
+
+  // Tail: length from recipe; base ≈ half body stitch width
+  const bodySts = stitchesForDiameter(bodyD, spi);
+  let tailBaseSts = Math.max(12, Math.round(bodySts * 0.5));
+  if (tailBaseSts % 2 === 1) tailBaseSts += 1;
+  const tailBaseD = actualDiameterIn(tailBaseSts, spi);
+  const tailLen = (tailP && tailP.heightIn) || headD * 0.85;
+  const tailTipD = actualDiameterIn(6, spi);
+
+  const earD = (earP && earP.diameterIn) || headD * 0.22;
+
+  // Muzzle oval (SEPARATE_PATCH) or cream mask height (CONTINUOUS = ~7 rounds)
+  const muzCh = (muzzleP && muzzleP.chLen) || 5;
+  const muzzleLen = Math.max(0.7, (muzCh / spi) * 1.35);
+  const muzzleWid = muzzleLen * 0.75;
+  const muzzleDepth = Math.max(0.35, 3.5 / rpi);
+  const creamMaskH = 7 / rpi;
+
+  return {
+    H: H,
+    spi: spi,
+    rpi: rpi,
+    faceStyle: faceStyle,
+    headD: headD,
+    bodyD: bodyD,
+    bodyH: bodyH,
+    armD: armD,
+    armH: armH,
+    paddleLen: paddleLen,
+    paddleWid: paddleWid,
+    paddleThick: paddleThick,
+    tailLen: tailLen,
+    tailBaseD: tailBaseD,
+    tailTipD: tailTipD,
+    earD: earD,
+    muzzleLen: muzzleLen,
+    muzzleWid: muzzleWid,
+    muzzleDepth: muzzleDepth,
+    creamMaskH: creamMaskH,
+    fromRecipe: !!(animal && animal.parts && animal.parts.length),
+  };
+}
+
+function buildOtterGroup(m) {
   const group = new THREE.Group();
-  // Warmer caramel + bright cream so the new look is obvious
-  const main = yarnMat("#c48a52", "rgba(70,35,12,0.2)");
-  const deep = yarnMat("#8a5528", "rgba(40,20,8,0.28)");
-  const cream = yarnMat("#fff4e0", "rgba(120,90,50,0.12)");
-
-  // Chubby pear body
-  addEllipsoid(group, main, 0.62, 0.55, 0.55, 0, 0.28, 0);
-  // BIG cream tummy (front) — hard to miss
-  addEllipsoid(group, cream, 0.46, 0.42, 0.22, 0, 0.26, 0.42);
-
-  // Thick tail backrest going UP behind the body
-  const t0 = addEllipsoid(group, deep, 0.32, 0.26, 0.3, 0, 0.35, -0.48);
-  t0.rotation.x = 0.4;
-  const t1 = addEllipsoid(group, deep, 0.22, 0.2, 0.34, 0, 0.62, -0.78);
-  t1.rotation.x = 0.7;
-  const t2 = addEllipsoid(group, deep, 0.12, 0.11, 0.22, 0, 0.88, -1.02);
-  t2.rotation.x = 0.85;
-
-  // Wide paddle feet
-  const footL = addEllipsoid(group, main, 0.36, 0.07, 0.22, -0.36, 0.02, 0.42);
-  const footR = addEllipsoid(group, main, 0.36, 0.07, 0.22, 0.36, 0.02, 0.42);
-  footL.rotation.y = 0.25;
-  footR.rotation.y = -0.25;
-  addEllipsoid(group, cream, 0.22, 0.035, 0.13, -0.36, 0.07, 0.52);
-  addEllipsoid(group, cream, 0.22, 0.035, 0.13, 0.36, 0.07, 0.52);
-
-  // Soft arms hugging chest
-  const armL = addEllipsoid(group, main, 0.12, 0.2, 0.12, -0.4, 0.46, 0.32);
-  const armR = addEllipsoid(group, main, 0.12, 0.2, 0.12, 0.4, 0.46, 0.32);
-  armL.rotation.set(0.3, 0, 0.7);
-  armR.rotation.set(0.3, 0, -0.7);
-
-  // Big chibi head
-  const headY = 1.05;
-  addEllipsoid(group, main, 0.5, 0.48, 0.48, 0, headY, 0.1);
-
-  if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
-    const snout = addEllipsoid(group, cream, 0.42, 0.24, 0.36, 0, headY - 0.12, 0.22);
-    snout.scale.y = 0.6;
-  } else {
-    addEllipsoid(group, cream, 0.24, 0.15, 0.2, 0, headY - 0.08, 0.44);
+  // 1 inch → scene units (fit ~10" otter in the viewport)
+  const U = 2.15 / m.H;
+  function u(inches) {
+    return inches * U;
   }
 
-  // Eyes
+  const main = yarnMat("#8b5a32", "rgba(45,22,8,0.22)");
+  const deep = yarnMat("#5c3a1c", "rgba(30,14,6,0.28)");
+  const cream = yarnMat("#f3e6d0", "rgba(100,75,45,0.14)");
+
+  // Body: plump egg — diameter × height from recipe
+  const bodyRx = u(m.bodyD / 2);
+  const bodyRy = u(m.bodyH / 2);
+  const bodyRz = u(m.bodyD / 2 * 0.95);
+  const bodyY = bodyRy;
+  addEllipsoid(group, main, bodyRx, bodyRy, bodyRz, 0, bodyY, 0);
+  // Cream tummy — front panel sized to ~70% body face
+  addEllipsoid(
+    group,
+    cream,
+    bodyRx * 0.72,
+    bodyRy * 0.7,
+    u(0.22),
+    0,
+    bodyY - u(0.05),
+    bodyRz * 0.85
+  );
+
+  // Thick tapered tail backrest (tip → base along length)
+  const tailBaseR = u(m.tailBaseD / 2);
+  const tipR = u(m.tailTipD / 2);
+  const midR = (tailBaseR + tipR) * 0.55;
+  const tLen = u(m.tailLen);
+  const t0 = addEllipsoid(
+    group,
+    deep,
+    tailBaseR,
+    tailBaseR * 0.85,
+    tLen * 0.28,
+    0,
+    bodyY + u(0.05),
+    -bodyRz - tLen * 0.12
+  );
+  t0.rotation.x = 0.45;
+  const t1 = addEllipsoid(
+    group,
+    deep,
+    midR,
+    midR * 0.9,
+    tLen * 0.32,
+    0,
+    bodyY + tLen * 0.28,
+    -bodyRz - tLen * 0.38
+  );
+  t1.rotation.x = 0.75;
+  const t2 = addEllipsoid(
+    group,
+    deep,
+    tipR,
+    tipR,
+    tLen * 0.22,
+    0,
+    bodyY + tLen * 0.52,
+    -bodyRz - tLen * 0.62
+  );
+  t2.rotation.x = 0.95;
+
+  // Paddle feet — oval sole size from chain/SPI
+  const pLen = u(m.paddleLen / 2);
+  const pWid = u(m.paddleWid / 2);
+  const pTh = u(m.paddleThick / 2);
+  const footY = u(m.paddleThick * 0.35);
+  const footZ = bodyRz * 0.55 + pLen * 0.6;
+  const footX = bodyRx * 0.55;
+  const footL = addEllipsoid(group, main, pLen, pTh, pWid, -footX, footY, footZ);
+  const footR = addEllipsoid(group, main, pLen, pTh, pWid, footX, footY, footZ);
+  footL.rotation.y = 0.22;
+  footR.rotation.y = -0.22;
+  addEllipsoid(group, cream, pLen * 0.55, pTh * 0.45, pWid * 0.55, -footX, footY + pTh, footZ + pLen * 0.15);
+  addEllipsoid(group, cream, pLen * 0.55, pTh * 0.45, pWid * 0.55, footX, footY + pTh, footZ + pLen * 0.15);
+
+  // Narrow arms — tube diameter + height from pattern
+  const aR = u(m.armD / 2);
+  const aH = u(m.armH / 2);
+  const armY = bodyY + bodyRy * 0.35;
+  const armZ = bodyRz * 0.55;
+  const armX = bodyRx * 0.75;
+  const armL = addEllipsoid(group, main, aR, aH, aR, -armX, armY, armZ);
+  const armR = addEllipsoid(group, main, aR, aH, aR, armX, armY, armZ);
+  armL.rotation.set(0.25, 0, 0.65);
+  armR.rotation.set(0.25, 0, -0.65);
+
+  // Head — finished diameter after stitch cap
+  const headR = u(m.headD / 2);
+  const headY = bodyY + bodyRy + headR * 0.82;
+  const headZ = u(0.08);
+  addEllipsoid(group, main, headR, headR * 0.96, headR * 0.96, 0, headY, headZ);
+
+  if (m.faceStyle === "CONTINUOUS_NOSE_FIRST") {
+    // Cream mask height ≈ 7 rounds / RPI
+    const maskH = u(m.creamMaskH / 2);
+    const snout = addEllipsoid(
+      group,
+      cream,
+      headR * 0.88,
+      maskH,
+      headR * 0.78,
+      0,
+      headY - headR * 0.22,
+      headZ + headR * 0.35
+    );
+    snout.scale.y = Math.max(0.45, (m.creamMaskH / m.headD) * 1.1);
+  } else {
+    const mzX = u(m.muzzleWid / 2);
+    const mzY = u(m.muzzleDepth / 2);
+    const mzZ = u(m.muzzleLen / 2);
+    addEllipsoid(
+      group,
+      cream,
+      mzX,
+      mzY,
+      mzZ,
+      0,
+      headY - headR * 0.15,
+      headZ + headR * 0.75
+    );
+  }
+
+  // Eyes / nose scale with head
+  const eyeR = headR * 0.13;
   const eyeMat = new THREE.MeshStandardMaterial({
     color: 0x111111,
     roughness: 0.15,
     metalness: 0.4,
   });
-  const eyeGeo = new THREE.SphereGeometry(0.065, 20, 16);
+  const eyeGeo = new THREE.SphereGeometry(1, 20, 16);
   const eyeY =
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY + 0.05 : headY + 0.1;
+    m.faceStyle === "CONTINUOUS_NOSE_FIRST"
+      ? headY + headR * 0.08
+      : headY + headR * 0.18;
   const eyeZ =
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.46 : 0.44;
-  [-0.16, 0.16].forEach(function (x) {
+    m.faceStyle === "CONTINUOUS_NOSE_FIRST"
+      ? headZ + headR * 0.85
+      : headZ + headR * 0.82;
+  [-1, 1].forEach(function (side) {
     const eye = new THREE.Mesh(eyeGeo, eyeMat);
-    eye.position.set(x, eyeY, eyeZ);
+    eye.scale.setScalar(eyeR);
+    eye.position.set(side * headR * 0.35, eyeY, eyeZ);
     group.add(eye);
     const hi = new THREE.Mesh(
-      new THREE.SphereGeometry(0.02, 10, 10),
+      new THREE.SphereGeometry(eyeR * 0.28, 10, 10),
       new THREE.MeshBasicMaterial({ color: 0xffffff })
     );
-    hi.position.set(x - 0.02, eyeY + 0.025, eyeZ + 0.05);
+    hi.position.set(side * headR * 0.35 - eyeR * 0.25, eyeY + eyeR * 0.35, eyeZ + eyeR * 0.7);
     group.add(hi);
   });
 
-  // Nose
   const nose = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05, 14, 12),
+    new THREE.SphereGeometry(1, 14, 12),
     new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4 })
   );
-  nose.scale.set(1.2, 0.7, 1);
+  nose.scale.set(eyeR * 0.85, eyeR * 0.55, eyeR * 0.75);
   nose.position.set(
     0,
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY - 0.16 : headY - 0.12,
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.54 : 0.58
+    m.faceStyle === "CONTINUOUS_NOSE_FIRST"
+      ? headY - headR * 0.28
+      : headY - headR * 0.22,
+    m.faceStyle === "CONTINUOUS_NOSE_FIRST"
+      ? headZ + headR * 1.05
+      : headZ + headR * 1.12
   );
   group.add(nose);
 
-  // Simple smile stitch
-  const smile = new THREE.Mesh(
-    new THREE.TorusGeometry(0.06, 0.012, 8, 16, Math.PI),
-    new THREE.MeshBasicMaterial({ color: 0x2a1810 })
-  );
-  smile.rotation.x = Math.PI;
-  smile.position.set(
-    0,
-    nose.position.y - 0.06,
-    nose.position.z - 0.02
-  );
-  group.add(smile);
-
-  // Whisker dots
-  const whiskerMat = new THREE.MeshBasicMaterial({ color: 0x3a2818 });
-  [-0.12, -0.18, 0.12, 0.18].forEach(function (x, i) {
-    const w = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), whiskerMat);
-    w.position.set(x, nose.position.y - 0.02, nose.position.z - 0.08);
-    if (i < 2) w.position.y -= 0.03 * (i % 2);
-    else w.position.y -= 0.03 * ((i - 2) % 2);
-    group.add(w);
-  });
-
-  // Ear bumps
-  addEllipsoid(group, main, 0.1, 0.08, 0.08, -0.34, headY + 0.32, 0);
-  addEllipsoid(group, main, 0.1, 0.08, 0.08, 0.34, headY + 0.32, 0);
+  // Ears from recipe diameter
+  const earR = u(m.earD / 2);
+  addEllipsoid(group, main, earR, earR * 0.75, earR * 0.7, -headR * 0.7, headY + headR * 0.65, headZ - headR * 0.1);
+  addEllipsoid(group, main, earR, earR * 0.75, earR * 0.7, headR * 0.7, headY + headR * 0.65, headZ - headR * 0.1);
 
   group.rotation.x = 0.06;
-  group.position.y = -0.35;
+  // Center the stack in view
+  group.position.y = -u(m.bodyH * 0.35);
   return group;
 }
 
@@ -197,13 +392,13 @@ function makeSoftShadow() {
     size / 2,
     size / 2
   );
-  g.addColorStop(0, "rgba(40,50,70,0.32)");
-  g.addColorStop(0.5, "rgba(40,50,70,0.12)");
+  g.addColorStop(0, "rgba(40,50,70,0.3)");
+  g.addColorStop(0.55, "rgba(40,50,70,0.1)");
   g.addColorStop(1, "rgba(40,50,70,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.0, 1.4),
+    new THREE.PlaneGeometry(2.2, 1.5),
     new THREE.MeshBasicMaterial({
       map: new THREE.CanvasTexture(canvas),
       transparent: true,
@@ -211,13 +406,24 @@ function makeSoftShadow() {
     })
   );
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = -0.04;
+  mesh.position.y = -0.05;
   return mesh;
+}
+
+function fmtIn(n) {
+  return (Math.round(n * 10) / 10).toFixed(1) + '"';
 }
 
 function createOtter3DPreview(container, options) {
   options = options || {};
-  const faceStyle = options.facialConstructionStyle || "SEPARATE_PATCH";
+  const animal = options.animal || null;
+  const gauge = options.gauge || { spi: 5, rpi: 5.5 };
+  const faceStyle =
+    options.facialConstructionStyle ||
+    (options.patternRequest && options.patternRequest.facialConstructionStyle) ||
+    "SEPARATE_PATCH";
+
+  const metrics = recipeMetrics(animal, gauge, faceStyle);
 
   if (container._otter3d && container._otter3d.dispose) {
     container._otter3d.dispose();
@@ -226,25 +432,33 @@ function createOtter3DPreview(container, options) {
   container.hidden = false;
   container.style.position = "relative";
 
-  // On-screen proof the new file loaded (helps with cache confusion)
   const badge = document.createElement("div");
-  badge.textContent = "3D build " + BUILD_TAG + " · cream tummy";
+  badge.textContent = metrics.fromRecipe
+    ? "3D " +
+      BUILD_TAG +
+      " · recipe " +
+      fmtIn(metrics.H) +
+      " · head " +
+      fmtIn(metrics.headD) +
+      " · body " +
+      fmtIn(metrics.bodyD) +
+      "×" +
+      fmtIn(metrics.bodyH)
+    : "3D " + BUILD_TAG + " · fallback sizes (generate pattern first)";
   badge.style.cssText =
-    "position:absolute;left:10px;top:10px;z-index:2;font:600 12px/1.2 system-ui,sans-serif;" +
-    "background:rgba(255,255,255,0.88);color:#3a2a1a;padding:6px 10px;border-radius:999px;" +
-    "box-shadow:0 1px 4px rgba(0,0,0,0.12);pointer-events:none;";
+    "position:absolute;left:10px;top:10px;z-index:2;font:600 11px/1.3 system-ui,sans-serif;" +
+    "background:rgba(255,255,255,0.9);color:#3a2a1a;padding:6px 10px;border-radius:10px;" +
+    "box-shadow:0 1px 4px rgba(0,0,0,0.12);pointer-events:none;max-width:92%;";
   container.appendChild(badge);
 
   const width = container.clientWidth || 420;
   const height = Math.min(440, Math.max(340, width));
 
   const scene = new THREE.Scene();
-  // Soft blue-gray backdrop — obvious vs old beige
-  scene.background = new THREE.Color(0xd6e4ef);
+  scene.background = new THREE.Color(0xd8e2ec);
 
   const camera = new THREE.PerspectiveCamera(32, width / height, 0.1, 100);
-  // Front-ish view so cream tummy + smile are visible
-  camera.position.set(0.35, 1.15, 3.6);
+  camera.position.set(0.4, 1.2, 3.7);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(width, height);
@@ -263,27 +477,26 @@ function createOtter3DPreview(container, options) {
   key.position.set(2, 5, 4);
   key.castShadow = true;
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffe2c4, 0.45);
+  const fill = new THREE.DirectionalLight(0xffe2c4, 0.4);
   fill.position.set(-3, 2, 1);
   scene.add(fill);
 
   scene.add(makeSoftShadow());
 
   const otterRoot = new THREE.Group();
-  const otter = buildOtterGroup(faceStyle);
+  const otter = buildOtterGroup(metrics);
   otterRoot.add(otter);
   scene.add(otterRoot);
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.5, 0);
+  controls.target.set(0, 0.55, 0);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 1.8;
-  controls.maxDistance = 7;
+  controls.maxDistance = 8;
   controls.maxPolarAngle = Math.PI * 0.55;
-  // Keep facing mostly forward so tummy stays readable; user can still orbit
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.6;
+  controls.autoRotateSpeed = 0.55;
   controls.update();
 
   let frame = 0;
@@ -293,7 +506,7 @@ function createOtter3DPreview(container, options) {
     if (!alive) return;
     frame = requestAnimationFrame(animate);
     const t = (now - t0) / 1000;
-    otter.position.y = Math.sin(t * 1.4) * 0.03;
+    otter.position.y = Math.sin(t * 1.3) * 0.025;
     controls.update();
     renderer.render(scene, camera);
   }
@@ -309,6 +522,7 @@ function createOtter3DPreview(container, options) {
   window.addEventListener("resize", onResize);
 
   const api = {
+    metrics: metrics,
     dispose: function () {
       alive = false;
       cancelAnimationFrame(frame);
@@ -325,5 +539,6 @@ function createOtter3DPreview(container, options) {
 
 window.AmigurumiOtter3D = {
   createOtter3DPreview: createOtter3DPreview,
+  recipeMetrics: recipeMetrics,
   BUILD_TAG: BUILD_TAG,
 };
