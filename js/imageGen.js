@@ -52,17 +52,19 @@
   function buildPrompt(patternRequest, extras) {
     extras = extras || {};
     if (global.AmigurumiPromptCompiler) {
+      // Free providers: compact identity-first prompt; OpenAI: full recipe prompt
+      const forFree = extras.provider === "free" || extras.compact;
       return global.AmigurumiPromptCompiler.compileFromPatternRequest(
         patternRequest,
-        extras
+        Object.assign({}, extras, { compact: !!forFree })
       );
     }
     const req = patternRequest || {};
     const name = extras.displayName || req.animalSpecies || "plush animal";
     return (
-      "Studio photograph of a handmade chenille amigurumi " +
+      "EXACT SUBJECT: handmade crochet amigurumi " +
       name +
-      " plush with visible single-crochet stitches, not a cartoon."
+      " only, not a generic teddy. Visible chenille single-crochet stitches."
     );
   }
 
@@ -148,7 +150,11 @@
     options = options || {};
     const provider = options.provider || getProvider();
     const prompt =
-      options.prompt || buildPrompt(options.patternRequest, options);
+      options.prompt ||
+      buildPrompt(
+        options.patternRequest,
+        Object.assign({}, options, { provider: provider })
+      );
     if (!prompt) throw new Error("Missing image prompt.");
 
     if (provider === "openai") {

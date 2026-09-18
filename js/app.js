@@ -1138,9 +1138,25 @@
             : "Generating plush preview with DALL·E 3…"
         );
         try {
+          // Refresh the current pattern recipe so the image matches this generate
+          let animal = null;
+          try {
+            const resultPack = generatePatternText();
+            animal = resultPack && resultPack.animal ? resultPack.animal : null;
+            if (resultPack && resultPack.text) {
+              patternText.textContent = resultPack.text;
+              output.hidden = false;
+              outputTitle.textContent = resultPack.title || "Pattern";
+            }
+          } catch (errGen) {
+            animal = null;
+          }
+
           const result = await window.AmigurumiImageGen.generatePlushImage({
             patternRequest: req,
             displayName: req._displayName || animalNameInput.value,
+            animal: animal,
+            description: animal && animal.description,
             blurb: animalBlurb ? animalBlurb.textContent : "",
             provider: provider,
             apiKey: openaiKeyInput ? openaiKeyInput.value : "",
@@ -1150,15 +1166,16 @@
             aiImage.onload = function () {
               setImageGenStatus(
                 provider === "free"
-                  ? "Free preview ready (quality varies; OpenAI is sharper when you want it)."
-                  : "Preview ready."
+                  ? "Preview ready from your pattern blueprint (free quality varies). Check the prompt below — it should name your animal + silhouette + face path."
+                  : "Preview ready from your pattern blueprint."
               );
             };
           }
           if (aiImageWrap) aiImageWrap.hidden = false;
           if (aiImagePrompt) {
             aiImagePrompt.textContent =
-              "Prompt used: " + (result.revisedPrompt || result.prompt);
+              "Prompt locked to pattern: " +
+              (result.revisedPrompt || result.prompt);
           }
           if (!aiImage) {
             setImageGenStatus("Preview ready.");
