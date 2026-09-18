@@ -241,18 +241,17 @@
         <fieldset>
           <legend>Plush preview</legend>
           <p class="hint">
-            <strong>From your pattern</strong> draws the toy the app will crochet
-            (pose, face path, pieces) — free, no API. AI image is only a loose
-            guess and often wrong.
-            <span class="hint">App build: engine25</span>
+            <strong>3D plush</strong> builds a simple spin-able otter from your
+            pattern settings (free). 2D pattern draw is also accurate. AI photo
+            guesses are optional and often wrong.
+            <span class="hint">App build: engine26</span>
           </p>
           <div class="field-row">
             <label>
               Preview mode
               <select id="image-provider" name="imageProvider">
-                <option value="pattern" selected>
-                  From pattern (recommended, free)
-                </option>
+                <option value="3d" selected>3D plush (Three.js, free)</option>
+                <option value="pattern">2D pattern construction (free)</option>
                 <option value="free">AI guess — free (unreliable)</option>
                 <option value="openai">AI guess — OpenAI DALL·E (paid)</option>
               </select>
@@ -281,6 +280,7 @@
           </div>
           <p id="image-gen-status" class="hint ref-status" hidden></p>
           <div id="ai-image-wrap" class="ai-image-wrap" hidden>
+            <div id="otter-3d-host" class="otter-3d-host" hidden></div>
             <canvas
               id="pattern-preview-canvas"
               width="512"
@@ -303,14 +303,23 @@
       </section>
     </main>
 
-    <script src="js/shapes.js?v=engine25"></script>
-    <script src="js/patternRequest.js?v=engine25"></script>
-    <script src="js/animalGenerator.js?v=engine25"></script>
-    <script src="js/patternMath.js?v=engine25"></script>
-    <script src="js/photoAnalysis.js?v=engine25"></script>
-    <script src="js/promptCompiler.js?v=engine25"></script>
-    <script src="js/patternPreview.js?v=engine25"></script>
-    <script src="js/imageGen.js?v=engine25"></script>
-    <script src="js/app.js?v=engine25"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script src="js/shapes.js?v=engine26"></script>
+    <script src="js/patternRequest.js?v=engine26"></script>
+    <script src="js/animalGenerator.js?v=engine26"></script>
+    <script src="js/patternMath.js?v=engine26"></script>
+    <script src="js/photoAnalysis.js?v=engine26"></script>
+    <script src="js/promptCompiler.js?v=engine26"></script>
+    <script src="js/patternPreview.js?v=engine26"></script>
+    <script src="js/imageGen.js?v=engine26"></script>
+    <script type="module" src="js/otter3dPreview.js?v=engine26"></script>
+    <script src="js/app.js?v=engine26"></script>
   </body>
 </html>

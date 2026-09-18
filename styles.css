@@ -260,6 +260,12 @@ label.grow {
   margin-top: 0.75rem;
 }
 
+.otter-3d-host {
+  width: 100%;
+  max-width: 420px;
+  min-height: 320px;
+}
+
 .pattern-preview-canvas,
 .ai-image-wrap img {
   display: block;

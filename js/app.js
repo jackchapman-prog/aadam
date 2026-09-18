@@ -26,6 +26,7 @@
   const aiImageWrap = document.getElementById("ai-image-wrap");
   const aiImage = document.getElementById("ai-image");
   const patternPreviewCanvas = document.getElementById("pattern-preview-canvas");
+  const otter3dHost = document.getElementById("otter-3d-host");
   const aiImagePrompt = document.getElementById("ai-image-prompt");
 
   let photoMetrics = null;
@@ -1086,34 +1087,43 @@
 
   function syncImageProviderUi() {
     if (!imageProviderSelect) return;
-    const provider = imageProviderSelect.value || "pattern";
+    const provider = imageProviderSelect.value || "3d";
     if (window.AmigurumiImageGen && window.AmigurumiImageGen.setProvider) {
-      // Only persist AI providers in imageGen storage
       if (provider === "free" || provider === "openai") {
         window.AmigurumiImageGen.setProvider(provider);
       }
     }
     if (openaiKeyRow) openaiKeyRow.hidden = provider !== "openai";
     if (genImageBtn) {
-      genImageBtn.textContent =
-        provider === "pattern"
-          ? "Draw pattern preview"
-          : "Generate AI preview";
+      if (provider === "3d") genImageBtn.textContent = "Show 3D otter";
+      else if (provider === "pattern")
+        genImageBtn.textContent = "Draw pattern preview";
+      else genImageBtn.textContent = "Generate AI preview";
     }
+  }
+
+  function waitForOtter3D(timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      const start = Date.now();
+      function tick() {
+        if (window.AmigurumiOtter3D && window.AmigurumiOtter3D.createOtter3DPreview) {
+          resolve(window.AmigurumiOtter3D);
+          return;
+        }
+        if (Date.now() - start > (timeoutMs || 4000)) {
+          reject(new Error("3D module still loading — try again in a second."));
+          return;
+        }
+        setTimeout(tick, 50);
+      }
+      tick();
+    });
   }
 
   function initImageGenUi() {
     if (imageProviderSelect) {
-      // Default to pattern preview (not AI)
-      const saved =
-        window.AmigurumiImageGen && window.AmigurumiImageGen.getProvider
-          ? window.AmigurumiImageGen.getProvider()
-          : "pattern";
-      // Prefer pattern unless user explicitly chose AI this session via select
       if (!imageProviderSelect.dataset.touched) {
-        imageProviderSelect.value = "pattern";
-      } else if (saved === "openai" || saved === "free") {
-        imageProviderSelect.value = saved;
+        imageProviderSelect.value = "3d";
       }
       imageProviderSelect.addEventListener("change", function () {
         imageProviderSelect.dataset.touched = "1";
@@ -1147,7 +1157,7 @@
         }
         const provider = imageProviderSelect
           ? imageProviderSelect.value
-          : "pattern";
+          : "3d";
 
         genImageBtn.disabled = true;
 
@@ -1165,8 +1175,35 @@
             animal = null;
           }
 
-          if (provider === "pattern") {
+          if (provider === "3d") {
+            setImageGenStatus("Building 3D otter from your pattern settings…");
+            const Otter3D = await waitForOtter3D(5000);
+            if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
+            if (aiImage) aiImage.hidden = true;
+            if (otter3dHost) otter3dHost.hidden = false;
+            if (aiImageWrap) aiImageWrap.hidden = false;
+            Otter3D.createOtter3DPreview(otter3dHost, {
+              facialConstructionStyle: req.facialConstructionStyle,
+              bodySilhouette: req.bodySilhouette,
+              animalSpecies: req.animalSpecies,
+            });
+            if (aiImagePrompt) {
+              aiImagePrompt.textContent =
+                "3D plush from recipe: " +
+                (req.animalSpecies || "otter") +
+                " · " +
+                req.facialConstructionStyle +
+                " · drag to orbit, scroll to zoom";
+            }
+            setImageGenStatus(
+              "3D otter ready — drag to spin. Face path follows your pattern setting."
+            );
+          } else if (provider === "pattern") {
             setImageGenStatus("Drawing construction preview from your pattern…");
+            if (otter3dHost && otter3dHost._otter3d) {
+              otter3dHost._otter3d.dispose();
+            }
+            if (otter3dHost) otter3dHost.hidden = true;
             if (!window.AmigurumiPatternPreview || !patternPreviewCanvas) {
               throw new Error("Pattern preview module missing.");
             }
@@ -1185,20 +1222,17 @@
                 " · " +
                 (req.bodySilhouette || "auto") +
                 " · " +
-                req.facialConstructionStyle +
-                (animal && animal.parts
-                  ? " · pieces: " +
-                    animal.parts
-                      .map(function (p) {
-                        return p.label || p.key;
-                      })
-                      .join(", ")
-                  : "");
+                req.facialConstructionStyle;
             }
             setImageGenStatus(
               "Pattern construction preview ready — this is what the app will crochet (not an AI photo)."
             );
           } else {
+            if (otter3dHost && otter3dHost._otter3d) {
+              otter3dHost._otter3d.dispose();
+            }
+            if (otter3dHost) otter3dHost.hidden = true;
+            if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
             if (!window.AmigurumiImageGen) {
               throw new Error("Image module missing.");
             }
@@ -1220,7 +1254,6 @@
               provider: provider,
               apiKey: openaiKeyInput ? openaiKeyInput.value : "",
             });
-            if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
             if (aiImage) {
               aiImage.hidden = false;
               aiImage.src = result.url;
@@ -1232,7 +1265,7 @@
                 (result.revisedPrompt || result.prompt);
             }
             setImageGenStatus(
-              "AI preview ready — treat as inspiration only; use From pattern for an accurate build preview."
+              "AI preview ready — treat as inspiration only; use 3D or 2D pattern preview for accuracy."
             );
           }
         } catch (err) {
