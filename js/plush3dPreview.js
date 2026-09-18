@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine37";
+var BUILD_TAG = "engine39";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -46,7 +46,7 @@ function speciesPalette(name) {
   const n = String(name || "").toLowerCase();
   if (n.indexOf("otter") >= 0) return { main: "#8b5a32", deep: "#5c3a1c", cream: "#f3e6d0", accent: "#c48a52" };
   if (n.indexOf("deer") >= 0) return { main: "#b07a45", deep: "#7a4e28", cream: "#f2e4cc", accent: "#d4a574" };
-  if (n.indexOf("unicorn") >= 0) return { main: "#f2eef8", deep: "#d8cce8", cream: "#fff8ff", accent: "#e8b4d4" };
+  if (n.indexOf("unicorn") >= 0) return { main: "#e8dff5", deep: "#c4b0e0", cream: "#fff6fb", accent: "#f0a0c8", hoof: "#5c4a6a", horn: "#e8c84a" };
   if (n.indexOf("hippo") >= 0) return { main: "#9aa3b0", deep: "#6d7582", cream: "#e8ecef", accent: "#b8c0cc" };
   if (n.indexOf("chinchilla") >= 0) return { main: "#c5b8a8", deep: "#8f8274", cream: "#f4efe8", accent: "#ddd2c4" };
   if (n.indexOf("fox") >= 0) return { main: "#d2691e", deep: "#8b4513", cream: "#fff5e6", accent: "#e8954a" };
@@ -94,6 +94,15 @@ function yarnMat(hex) {
     color: 0xffffff,
     roughness: 0.95,
     metalness: 0,
+  });
+}
+
+function solidMat(hex, opts) {
+  opts = opts || {};
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color(hex),
+    roughness: opts.roughness != null ? opts.roughness : 0.85,
+    metalness: opts.metalness != null ? opts.metalness : 0,
   });
 }
 
@@ -274,6 +283,7 @@ function layoutFamily(animal) {
   const name = String((animal && animal.name) || "").toLowerCase();
   if (f.floppyWaterMammal || name.indexOf("otter") >= 0) return "otter";
   if (plan === "biped" || name.indexOf("deer") >= 0) return "deer";
+  if (name.indexOf("unicorn") >= 0 || (f.horns && f.mane && plan === "sitting")) return "unicorn";
   if (plan === "quadruped") return "quad";
   if (plan === "bird") return "bird";
   if (plan === "fish") return "fish";
@@ -442,6 +452,251 @@ function buildOtterGroup(animal, gauge, faceStyle, mats) {
   };
 }
 
+/**
+ * Molly-style sitting unicorn — NOT a standing horse, NOT one giant ball.
+ * Sitting body + hoof limbs + sculpted head + thin horn + spiral mane/tail locks.
+ */
+function buildUnicornGroup(animal, gauge, mats) {
+  const H = animal.designedHeightIn || 10;
+  const spi = gauge.spi;
+  const U = 2.15 / H;
+  function u(v) {
+    return v * U;
+  }
+  const headP = partByKey(animal, "head");
+  const bodyP = partByKey(animal, "body");
+  const armP = partByKey(animal, "arm");
+  const legP = partByKey(animal, "leg");
+  const earP = partByKey(animal, "ear");
+  const hornP = partByKey(animal, "horn");
+  const maneP = partByKey(animal, "mane");
+  const tailP = partByKey(animal, "tail");
+  const cap =
+    (bodyP && bodyP.maxStitchCap) ||
+    (animal.yarnProfile && animal.yarnProfile.maxStitchCap) ||
+    null;
+
+  const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.4), spi, cap);
+  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", headD * 0.88), spi, cap);
+  const bodyH = inch(bodyP, "heightIn", bodyD * 0.8);
+  const legLen = inch(legP, "heightIn", headD * 0.5);
+  const legDia = inch(legP, "diameterIn", headD * 0.55);
+  const armLen = inch(armP, "heightIn", headD * 0.45);
+  const armDia = inch(armP, "diameterIn", headD * 0.32);
+  const hornH = inch(hornP, "heightIn", headD * 0.35);
+  const hornD = inch(hornP, "diameterIn", headD * 0.14);
+  const earD = inch(earP, "diameterIn", headD * 0.28);
+  const maneLen = inch(maneP, "lengthIn", headD * 2.2);
+  const tailLen = inch(tailP, "lengthIn", headD * 1.6);
+  const maneCount = (maneP && maneP.count) || 6;
+  const tailCount = (tailP && tailP.count) || 6;
+
+  const hoofMat = mats.hoof || solidMat("#5c4a6a");
+  const hornMat = mats.horn || solidMat("#e8c84a", { roughness: 0.45, metalness: 0.15 });
+  const lockMats = [
+    mats.accent,
+    mats.deep,
+    mats.cream,
+    solidMat("#a8d4f0"),
+    solidMat("#f5c6e0"),
+    mats.main,
+  ];
+
+  const group = new THREE.Group();
+
+  // Sitting body: wide hips, softer chest (clear torso, not a sphere)
+  const hipR = u(bodyD / 2);
+  const bodyRy = u(bodyH / 2);
+  addEllipsoid(group, mats.main, hipR, bodyRy * 0.85, hipR * 0.92, 0, bodyRy * 0.85, 0);
+  addEllipsoid(group, mats.main, hipR * 0.78, bodyRy * 0.55, hipR * 0.75, 0, bodyRy * 1.45, u(0.04));
+  // Soft belly
+  addEllipsoid(group, mats.cream, hipR * 0.6, bodyRy * 0.5, u(0.14), 0, bodyRy * 0.8, hipR * 0.7);
+
+  // Hoof-tipped legs at wide hip section (sitting)
+  const lR = u(legDia / 2);
+  const lH = u(legLen);
+  const hoofH = lH * 0.22;
+  [-1, 1].forEach(function (side) {
+    const x = side * hipR * 0.55;
+    const z = hipR * 0.35;
+    // Hoof foot (darker)
+    addEllipsoid(group, hoofMat, lR * 1.05, hoofH * 0.55, lR * 1.1, x, hoofH * 0.45, z);
+    // Leg tube
+    addCylinder(
+      group,
+      mats.main,
+      lR * 0.85,
+      lR,
+      lH - hoofH,
+      x,
+      hoofH + (lH - hoofH) * 0.45,
+      z,
+      0.12,
+      0
+    );
+  });
+
+  // Hoof-tipped arms higher on body
+  const aR = u(armDia / 2);
+  const aH = u(armLen);
+  const aHoof = aH * 0.2;
+  [-1, 1].forEach(function (side) {
+    const x = side * hipR * 0.85;
+    const y = bodyRy * 1.35;
+    const z = hipR * 0.45;
+    addEllipsoid(group, hoofMat, aR * 0.95, aHoof * 0.5, aR, x, y - aH * 0.35, z + aH * 0.15);
+    const arm = addCylinder(
+      group,
+      mats.main,
+      aR * 0.8,
+      aR,
+      aH - aHoof,
+      x,
+      y,
+      z,
+      0.35,
+      side * 0.45
+    );
+    arm.rotation.z = side > 0 ? -0.45 : 0.45;
+  });
+
+  // Sculpted head (separate, sewn on — slightly tapered muzzle)
+  const headR = u(headD / 2);
+  const headY = bodyRy * 1.85 + headR * 0.9;
+  const headZ = u(0.08);
+  addEllipsoid(group, mats.main, headR * 0.95, headR, headR * 0.95, 0, headY, headZ);
+  // Soft muzzle / face front
+  addEllipsoid(
+    group,
+    mats.cream,
+    headR * 0.55,
+    headR * 0.4,
+    headR * 0.45,
+    0,
+    headY - headR * 0.15,
+    headZ + headR * 0.7
+  );
+  // Nostrils
+  [-1, 1].forEach(function (side) {
+    const n = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 8, 8),
+      solidMat("#c090a8")
+    );
+    n.scale.setScalar(headR * 0.06);
+    n.position.set(side * headR * 0.18, headY - headR * 0.22, headZ + headR * 1.05);
+    group.add(n);
+  });
+
+  // Pointed ears
+  const eR = u(earD / 2);
+  [-1, 1].forEach(function (side) {
+    const ear = addEllipsoid(
+      group,
+      mats.main,
+      eR * 0.45,
+      eR * 1.1,
+      eR * 0.35,
+      side * headR * 0.65,
+      headY + headR * 0.55,
+      headZ - headR * 0.1
+    );
+    ear.rotation.z = side * -0.4;
+    addEllipsoid(
+      group,
+      mats.accent,
+      eR * 0.28,
+      eR * 0.7,
+      eR * 0.12,
+      side * headR * 0.65,
+      headY + headR * 0.55,
+      headZ - headR * 0.02
+    );
+  });
+
+  // Thin horn on forehead (gold)
+  const hR = u(hornD / 2);
+  const hH = u(hornH);
+  const horn = new THREE.Mesh(
+    new THREE.CylinderGeometry(hR * 0.15, hR, hH, 12),
+    hornMat
+  );
+  horn.position.set(0, headY + headR * 0.55 + hH * 0.4, headZ + headR * 0.25);
+  horn.rotation.x = -0.35;
+  group.add(horn);
+  // Soft spiral ridge on horn
+  for (let i = 0; i < 4; i++) {
+    const ridge = new THREE.Mesh(
+      new THREE.TorusGeometry(hR * (0.7 - i * 0.12), hR * 0.08, 6, 12),
+      hornMat
+    );
+    ridge.position.set(0, headY + headR * 0.55 + hH * (0.25 + i * 0.18), headZ + headR * 0.25);
+    ridge.rotation.x = Math.PI / 2 - 0.35;
+    group.add(ridge);
+  }
+
+  // Spiral mane locks along head/neck (several colors)
+  const mLen = u(Math.min(maneLen * 0.35, headD * 0.85));
+  const mR = u(0.07);
+  for (let i = 0; i < maneCount; i++) {
+    const t = i / Math.max(1, maneCount - 1);
+    const lock = new THREE.Mesh(
+      new THREE.CylinderGeometry(mR * 0.5, mR, mLen, 8),
+      lockMats[i % lockMats.length]
+    );
+    const ang = -0.6 + t * 1.2;
+    lock.position.set(
+      Math.sin(ang) * headR * 0.35,
+      headY - headR * 0.1 - t * headR * 0.4,
+      -headR * 0.55 - t * mLen * 0.15
+    );
+    lock.rotation.x = 0.9 + t * 0.25;
+    lock.rotation.z = ang * 0.4;
+    // slight spiral twist look
+    lock.rotation.y = t * 1.5;
+    group.add(lock);
+  }
+
+  // Bundled spiral tail locks at lower back
+  const tLen = u(Math.min(tailLen * 0.4, headD * 0.7));
+  const tR = u(0.065);
+  for (let i = 0; i < Math.min(tailCount, 6); i++) {
+    const lock = new THREE.Mesh(
+      new THREE.CylinderGeometry(tR * 0.45, tR, tLen, 8),
+      lockMats[(i + 2) % lockMats.length]
+    );
+    const spread = (i - 2.5) * 0.12;
+    lock.position.set(spread * hipR, bodyRy * 0.55 - tLen * 0.15, -hipR * 0.95);
+    lock.rotation.x = 1.05 + Math.abs(spread) * 0.2;
+    lock.rotation.z = spread * 0.8;
+    group.add(lock);
+  }
+
+  // Eyes
+  const eyeR = headR * 0.11;
+  [-1, 1].forEach(function (side) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), mats.black);
+    eye.scale.setScalar(eyeR);
+    eye.position.set(side * headR * 0.32, headY + headR * 0.08, headZ + headR * 0.78);
+    group.add(eye);
+    const lid = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 8, 8),
+      solidMat("#d8c0e8")
+    );
+    lid.scale.set(eyeR * 1.15, eyeR * 0.4, eyeR * 0.5);
+    lid.position.set(side * headR * 0.32, headY + headR * 0.18, headZ + headR * 0.72);
+    group.add(lid);
+  });
+
+  group.position.y = -u(bodyH * 0.15);
+  return {
+    group: group,
+    label:
+      "Molly sitting · horn · " +
+      maneCount +
+      " mane locks · hoof limbs",
+  };
+}
+
 function buildSittingGroup(animal, gauge, mats) {
   const H = animal.designedHeightIn || 10;
   const spi = gauge.spi;
@@ -554,7 +809,7 @@ function buildSittingGroup(animal, gauge, mats) {
 function buildDeerGroup(animal, gauge, mats) {
   const H = animal.designedHeightIn || 10;
   const spi = gauge.spi;
-  const U = 2.15 / H;
+  const U = 2.05 / H;
   function u(v) {
     return v * U;
   }
@@ -563,40 +818,216 @@ function buildDeerGroup(animal, gauge, mats) {
   const armP = partByKey(animal, "arm");
   const legP = partByKey(animal, "leg");
   const muzzleP = partByKey(animal, "muzzle");
+  const earP = partByKey(animal, "ear");
+  const earInnerP = partByKey(animal, "ear-inner");
   const antlerP = partByKey(animal, "antler");
-  const cap = bodyP && bodyP.maxStitchCap;
+  const tineP = partByKey(animal, "tine");
+  const tailP = partByKey(animal, "tail");
+  const cap =
+    (bodyP && bodyP.maxStitchCap) ||
+    (animal.yarnProfile && animal.yarnProfile.maxStitchCap) ||
+    null;
 
-  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.35), spi, cap);
-  const bodyH = inch(bodyP, "heightIn", bodyD * 1.1);
+  // Recipe inches from buildChibiDeer (~10": head 4.2", pear ~3", legs ~3.5", antlers ~1.2")
   const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.42), spi, cap);
+  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", headD * 0.62), spi, cap);
+  const bodyH = inch(bodyP, "heightIn", headD * 0.72);
+  const limbDia = inch(armP, "diameterIn", headD * 0.14);
+  const armLen = inch(armP, "heightIn", headD * 0.7);
+  const legLen = inch(legP, "heightIn", headD * 0.85);
+  const antlerH = inch(antlerP, "heightIn", headD * 0.32);
+  const antlerD = inch(antlerP, "diameterIn", headD * 0.1);
+  const tineH = inch(tineP, "heightIn", antlerH * 0.45);
+  const tineD = inch(tineP, "diameterIn", headD * 0.07);
+  const muzzleLen = inch(muzzleP, "lengthIn", headD * 0.18);
+  const muzzleDia = inch(muzzleP, "diameterIn", headD * 0.38);
+  const earD = inch(earP, "diameterIn", headD * 0.32);
+  const earInnerD = inch(earInnerP, "diameterIn", headD * 0.22);
+
   const group = new THREE.Group();
-  const bodyRx = u(bodyD / 2);
+
+  // Pear body: wider belly, narrower shoulders + short neck stump
   const bodyRy = u(bodyH / 2);
-  addEllipsoid(group, mats.main, bodyRx * 0.9, bodyRy, bodyRx, 0, bodyRy, 0);
+  const bellyR = u(bodyD / 2);
+  const shoulderR = bellyR * 0.72;
+  addEllipsoid(group, mats.main, bellyR * 0.95, bodyRy * 0.7, bellyR * 0.9, 0, bodyRy * 0.75, 0);
+  addEllipsoid(group, mats.main, shoulderR, bodyRy * 0.45, shoulderR * 0.95, 0, bodyRy * 1.35, 0);
+  // Cream belly patch
+  addEllipsoid(group, mats.cream, bellyR * 0.55, bodyRy * 0.45, u(0.12), 0, bodyRy * 0.7, bellyR * 0.75);
+  // Short neck stump (head sews on)
+  const neckH = u(headD * 0.08);
+  addCylinder(group, mats.main, shoulderR * 0.55, shoulderR * 0.65, neckH, 0, bodyRy * 1.75 + neckH * 0.4, 0, 0, 0);
+
+  // Oversized head
   const headR = u(headD / 2);
-  const headY = bodyRy * 2 + headR * 0.55;
-  addEllipsoid(group, mats.main, headR, headR, headR, 0, headY, 0);
-  if (muzzleP) {
-    const md = u(inch(muzzleP, "diameterIn", headD * 0.35) / 2);
-    addEllipsoid(group, mats.cream, md, md * 0.7, md * 1.2, 0, headY - headR * 0.2, headR * 0.75);
-  }
-  const limbD = u(inch(armP, "diameterIn", headD * 0.12) / 2);
-  const armH = u(inch(armP, "heightIn", headD * 0.7));
-  const legH = u(inch(legP, "heightIn", headD * 0.85));
+  const headY = bodyRy * 1.75 + neckH + headR * 0.85;
+  const headZ = u(0.06);
+  addEllipsoid(group, mats.main, headR, headR * 0.98, headR * 0.98, 0, headY, headZ);
+  // Cream lower-face color block (pattern: color-block lower face cream)
+  addEllipsoid(
+    group,
+    mats.cream,
+    headR * 0.82,
+    headR * 0.42,
+    headR * 0.7,
+    0,
+    headY - headR * 0.28,
+    headZ + headR * 0.25
+  );
+  // Sew-on cream muzzle
+  const mzR = u(muzzleDia / 2);
+  const mzL = u(muzzleLen);
+  addEllipsoid(
+    group,
+    mats.cream,
+    mzR,
+    mzR * 0.7,
+    mzL * 0.85 + mzR * 0.5,
+    0,
+    headY - headR * 0.22,
+    headZ + headR * 0.78
+  );
+  // Dark nose stitch
+  const nose = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.5 })
+  );
+  nose.scale.set(mzR * 0.55, mzR * 0.35, mzR * 0.4);
+  nose.position.set(0, headY - headR * 0.28, headZ + headR * 0.95 + mzL * 0.3);
+  group.add(nose);
+
+  // Flat layered ears (outer main + cream inner) — leaf/flat, not stuffed balls
+  const eOut = u(earD / 2);
+  const eIn = u(earInnerD / 2);
   [-1, 1].forEach(function (side) {
-    addCylinder(group, mats.main, limbD, limbD, armH, side * bodyRx * 0.7, bodyRy * 1.1, 0, 0.1, side * 0.15);
-    addCylinder(group, mats.main, limbD, limbD * 1.1, legH, side * bodyRx * 0.4, legH * 0.4, 0, 0, 0);
+    const outer = addEllipsoid(
+      group,
+      mats.main,
+      eOut * 0.55,
+      eOut * 1.05,
+      eOut * 0.18,
+      side * headR * 0.72,
+      headY + headR * 0.45,
+      headZ - headR * 0.05
+    );
+    outer.rotation.z = side * -0.35;
+    outer.rotation.x = -0.2;
+    const inner = addEllipsoid(
+      group,
+      mats.cream,
+      eIn * 0.5,
+      eIn * 0.95,
+      eIn * 0.12,
+      side * headR * 0.72,
+      headY + headR * 0.45,
+      headZ + u(0.02)
+    );
+    inner.rotation.z = side * -0.35;
+    inner.rotation.x = -0.2;
   });
-  if (antlerP) {
-    const ah = u(inch(antlerP, "heightIn", headD * 0.4));
-    const ad = u(inch(antlerP, "diameterIn", 0.25) / 2);
-    [-1, 1].forEach(function (side) {
-      addCylinder(group, mats.deep, ad * 0.5, ad, ah, side * headR * 0.35, headY + headR * 0.6 + ah * 0.35, -headR * 0.1, -0.15, side * 0.2);
-    });
+
+  // Branched cream antlers (beam + tine = Y) between the ears — pattern cream, not dark
+  const beamH = u(antlerH);
+  const beamR = u(antlerD / 2);
+  const tH = u(tineH);
+  const tR = u(tineD / 2);
+  [-1, 1].forEach(function (side) {
+    const antlerGroup = new THREE.Group();
+    // Main beam
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(beamR * 0.45, beamR, beamH, 10),
+      mats.cream
+    );
+    beam.position.y = beamH / 2;
+    antlerGroup.add(beam);
+    // Short tine forked mid-beam (Y / heart fork)
+    const tine = new THREE.Mesh(
+      new THREE.CylinderGeometry(tR * 0.4, tR, tH, 8),
+      mats.cream
+    );
+    tine.position.set(side * tH * 0.35, beamH * 0.45, 0);
+    tine.rotation.z = side * -0.85;
+    antlerGroup.add(tine);
+    // Place between ears on top of head
+    antlerGroup.position.set(
+      side * headR * 0.28,
+      headY + headR * 0.78,
+      headZ - headR * 0.15
+    );
+    antlerGroup.rotation.x = -0.2;
+    antlerGroup.rotation.z = side * 0.18;
+    group.add(antlerGroup);
+  });
+
+  // Eyes + tiny brow dots
+  const eyeR = headR * 0.11;
+  [-1, 1].forEach(function (side) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), mats.black);
+    eye.scale.setScalar(eyeR);
+    eye.position.set(side * headR * 0.32, headY + headR * 0.08, headZ + headR * 0.78);
+    group.add(eye);
+    const brow = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 6, 6),
+      new THREE.MeshStandardMaterial({ color: 0x3a2818, roughness: 0.9 })
+    );
+    brow.scale.set(eyeR * 1.2, eyeR * 0.35, eyeR * 0.4);
+    brow.position.set(side * headR * 0.34, headY + headR * 0.22, headZ + headR * 0.72);
+    group.add(brow);
+  });
+
+  // Long thin dangling arms (soft tubes from shoulders)
+  const aR = u(limbDia / 2);
+  const aLen = u(armLen);
+  [-1, 1].forEach(function (side) {
+    const arm = addCylinder(
+      group,
+      mats.main,
+      aR * 0.85,
+      aR,
+      aLen,
+      side * shoulderR * 1.05,
+      bodyRy * 1.45 - aLen * 0.25,
+      u(0.05),
+      0.15,
+      side * 0.12
+    );
+    arm.rotation.z = side * 0.08;
+  });
+
+  // Longer thin dangling legs from bottom of pear
+  const lR = u((limbDia * 1.05) / 2);
+  const lLen = u(legLen);
+  [-1, 1].forEach(function (side) {
+    addCylinder(
+      group,
+      mats.main,
+      lR * 0.9,
+      lR,
+      lLen,
+      side * bellyR * 0.35,
+      -lLen * 0.15,
+      bellyR * 0.15,
+      0.08,
+      0
+    );
+  });
+
+  // Tiny teardrop tail
+  if (tailP) {
+    const td = u(inch(tailP, "diameterIn", headD * 0.12) / 2);
+    const th = u(inch(tailP, "heightIn", headD * 0.16));
+    addEllipsoid(group, mats.main, td * 0.7, th * 0.55, td * 0.7, 0, bodyRy * 0.55, -bellyR * 0.95);
   }
-  addEyes(group, headR, headY, 0, mats.black);
-  group.position.y = -u(0.2);
-  return { group: group, label: "dangling deer · recipe inches" };
+
+  // Center the dangling stack in view (legs hang below)
+  group.position.y = u(legLen * 0.15);
+  return {
+    group: group,
+    label:
+      "dangling deer · antlers Y · muzzle · ears · " +
+      headD.toFixed(1) +
+      '" head",
+  };
 }
 
 function buildQuadGroup(animal, gauge, mats) {
@@ -838,11 +1269,14 @@ function buildPlushGroup(animal, gauge, faceStyle) {
     deep: yarnMat(pal.deep),
     cream: yarnMat(pal.cream),
     accent: yarnMat(pal.accent),
+    hoof: pal.hoof ? solidMat(pal.hoof) : null,
+    horn: pal.horn ? solidMat(pal.horn, { roughness: 0.45, metalness: 0.15 }) : null,
     black: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.35 }),
   };
   const family = layoutFamily(animal);
   if (family === "otter") return Object.assign(buildOtterGroup(animal, gauge, faceStyle, mats), { family: family });
   if (family === "deer") return Object.assign(buildDeerGroup(animal, gauge, mats), { family: family });
+  if (family === "unicorn") return Object.assign(buildUnicornGroup(animal, gauge, mats), { family: family });
   if (family === "quad") return Object.assign(buildQuadGroup(animal, gauge, mats), { family: family });
   if (family === "bird") return Object.assign(buildBirdGroup(animal, gauge, mats), { family: family });
   if (family === "fish") return Object.assign(buildFishGroup(animal, gauge, mats), { family: family });
@@ -938,6 +1372,11 @@ function createPlush3DPreview(container, options) {
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.55, 0);
+  // Deer is taller (dangling legs) — frame more of the stack
+  if (built.family === "deer") {
+    controls.target.set(0, 0.35, 0);
+    camera.position.set(0.55, 1.05, 4.1);
+  }
   controls.enableDamping = true;
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.55;
