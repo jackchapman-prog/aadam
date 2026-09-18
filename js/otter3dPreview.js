@@ -5,6 +5,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+var BUILD_TAG = "engine29";
+
 function makeChenilleTexture(baseHex, stitchHex) {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -14,14 +16,13 @@ function makeChenilleTexture(baseHex, stitchHex) {
   ctx.fillStyle = baseHex;
   ctx.fillRect(0, 0, size, size);
 
-  // Soft yarn flecks (chenille look) instead of a hard grid
-  for (let i = 0; i < 2200; i++) {
+  for (let i = 0; i < 2800; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = 0.6 + Math.random() * 1.8;
-    const a = 0.04 + Math.random() * 0.12;
+    const r = 0.7 + Math.random() * 2.2;
+    const a = 0.05 + Math.random() * 0.14;
     ctx.fillStyle =
-      Math.random() > 0.5
+      Math.random() > 0.45
         ? "rgba(255,255,255," + a + ")"
         : stitchHex.replace(/[\d.]+\)$/, a.toFixed(2) + ")");
     ctx.beginPath();
@@ -29,21 +30,20 @@ function makeChenilleTexture(baseHex, stitchHex) {
     ctx.fill();
   }
 
-  // Subtle horizontal "row" cues
   ctx.strokeStyle = stitchHex;
-  ctx.lineWidth = 0.8;
-  ctx.globalAlpha = 0.35;
-  for (let y = 0; y < size; y += 8) {
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.4;
+  for (let y = 0; y < size; y += 7) {
     ctx.beginPath();
-    ctx.moveTo(0, y + (Math.random() * 1.5 - 0.75));
-    ctx.lineTo(size, y);
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y + (Math.random() - 0.5));
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2.2, 2.2);
+  tex.repeat.set(2.4, 2.4);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
@@ -54,13 +54,13 @@ function yarnMat(hex, stitchHex, opts) {
   return new THREE.MeshStandardMaterial({
     map: map,
     color: 0xffffff,
-    roughness: opts.roughness != null ? opts.roughness : 0.95,
+    roughness: opts.roughness != null ? opts.roughness : 0.96,
     metalness: 0,
   });
 }
 
 function addEllipsoid(parent, mat, sx, sy, sz, x, y, z) {
-  const geo = new THREE.SphereGeometry(1, 32, 24);
+  const geo = new THREE.SphereGeometry(1, 36, 28);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.scale.set(sx, sy, sz);
   mesh.position.set(x, y, z);
@@ -72,97 +72,114 @@ function addEllipsoid(parent, mat, sx, sy, sz, x, y, z) {
 
 function buildOtterGroup(faceStyle) {
   const group = new THREE.Group();
-  const main = yarnMat("#7a5230", "rgba(40,20,8,0.22)");
-  const deep = yarnMat("#4e3218", "rgba(25,12,5,0.28)");
-  const cream = yarnMat("#f3e6d0", "rgba(100,75,45,0.14)");
+  // Warmer caramel + bright cream so the new look is obvious
+  const main = yarnMat("#c48a52", "rgba(70,35,12,0.2)");
+  const deep = yarnMat("#8a5528", "rgba(40,20,8,0.28)");
+  const cream = yarnMat("#fff4e0", "rgba(120,90,50,0.12)");
 
-  // Pear body — wide hips, softer chest (floppy seated)
-  addEllipsoid(group, main, 0.58, 0.52, 0.52, 0, 0.32, 0.02);
-  // Cream tummy
-  addEllipsoid(group, cream, 0.38, 0.36, 0.18, 0, 0.3, 0.38);
+  // Chubby pear body
+  addEllipsoid(group, main, 0.62, 0.55, 0.55, 0, 0.28, 0);
+  // BIG cream tummy (front) — hard to miss
+  addEllipsoid(group, cream, 0.46, 0.42, 0.22, 0, 0.26, 0.42);
 
-  // Thick tapered tail as backrest (tip → base)
-  const tailBase = addEllipsoid(group, deep, 0.28, 0.22, 0.26, 0.02, 0.38, -0.42);
-  tailBase.rotation.x = 0.35;
-  const tailMid = addEllipsoid(group, deep, 0.2, 0.18, 0.28, 0.02, 0.55, -0.68);
-  tailMid.rotation.x = 0.55;
-  const tailTip = addEllipsoid(group, deep, 0.12, 0.1, 0.18, 0.02, 0.72, -0.9);
-  tailTip.rotation.x = 0.65;
+  // Thick tail backrest going UP behind the body
+  const t0 = addEllipsoid(group, deep, 0.32, 0.26, 0.3, 0, 0.35, -0.48);
+  t0.rotation.x = 0.4;
+  const t1 = addEllipsoid(group, deep, 0.22, 0.2, 0.34, 0, 0.62, -0.78);
+  t1.rotation.x = 0.7;
+  const t2 = addEllipsoid(group, deep, 0.12, 0.11, 0.22, 0, 0.88, -1.02);
+  t2.rotation.x = 0.85;
 
-  // Wide paddle feet forward / slightly out
-  const footL = addEllipsoid(group, main, 0.32, 0.06, 0.2, -0.32, 0.04, 0.38);
-  const footR = addEllipsoid(group, main, 0.32, 0.06, 0.2, 0.32, 0.04, 0.38);
-  footL.rotation.y = 0.2;
-  footR.rotation.y = -0.2;
-  addEllipsoid(group, cream, 0.18, 0.03, 0.11, -0.32, 0.08, 0.46);
-  addEllipsoid(group, cream, 0.18, 0.03, 0.11, 0.32, 0.08, 0.46);
+  // Wide paddle feet
+  const footL = addEllipsoid(group, main, 0.36, 0.07, 0.22, -0.36, 0.02, 0.42);
+  const footR = addEllipsoid(group, main, 0.36, 0.07, 0.22, 0.36, 0.02, 0.42);
+  footL.rotation.y = 0.25;
+  footR.rotation.y = -0.25;
+  addEllipsoid(group, cream, 0.22, 0.035, 0.13, -0.36, 0.07, 0.52);
+  addEllipsoid(group, cream, 0.22, 0.035, 0.13, 0.36, 0.07, 0.52);
 
-  // Soft short arms on upper chest, resting inward
-  const armL = addEllipsoid(group, main, 0.11, 0.18, 0.11, -0.34, 0.48, 0.3);
-  const armR = addEllipsoid(group, main, 0.11, 0.18, 0.11, 0.34, 0.48, 0.3);
-  armL.rotation.z = 0.55;
-  armR.rotation.z = -0.55;
-  armL.rotation.x = 0.25;
-  armR.rotation.x = 0.25;
+  // Soft arms hugging chest
+  const armL = addEllipsoid(group, main, 0.12, 0.2, 0.12, -0.4, 0.46, 0.32);
+  const armR = addEllipsoid(group, main, 0.12, 0.2, 0.12, 0.4, 0.46, 0.32);
+  armL.rotation.set(0.3, 0, 0.7);
+  armR.rotation.set(0.3, 0, -0.7);
 
-  // Large chibi head (~40% of height)
-  const headY = 0.98;
-  addEllipsoid(group, main, 0.46, 0.44, 0.44, 0, headY, 0.08);
+  // Big chibi head
+  const headY = 1.05;
+  addEllipsoid(group, main, 0.5, 0.48, 0.48, 0, headY, 0.1);
 
   if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
-    // Cream lower face / snout (round-switch mask)
-    const snout = addEllipsoid(group, cream, 0.38, 0.22, 0.34, 0, headY - 0.1, 0.2);
-    snout.scale.y = 0.58;
+    const snout = addEllipsoid(group, cream, 0.42, 0.24, 0.36, 0, headY - 0.12, 0.22);
+    snout.scale.y = 0.6;
   } else {
-    // Separate cream muzzle patch
-    addEllipsoid(group, cream, 0.2, 0.13, 0.17, 0, headY - 0.06, 0.4);
+    addEllipsoid(group, cream, 0.24, 0.15, 0.2, 0, headY - 0.08, 0.44);
   }
 
-  // Glossy safety eyes
+  // Eyes
   const eyeMat = new THREE.MeshStandardMaterial({
-    color: 0x141414,
-    roughness: 0.18,
-    metalness: 0.35,
+    color: 0x111111,
+    roughness: 0.15,
+    metalness: 0.4,
   });
-  const eyeGeo = new THREE.SphereGeometry(0.06, 20, 16);
-  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  const eyeGeo = new THREE.SphereGeometry(0.065, 20, 16);
   const eyeY =
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY + 0.04 : headY + 0.08;
+    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY + 0.05 : headY + 0.1;
   const eyeZ =
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.42 : 0.4;
-  eyeL.position.set(-0.15, eyeY, eyeZ);
-  eyeR.position.set(0.15, eyeY, eyeZ);
-  group.add(eyeL, eyeR);
-
-  const hiMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const hiGeo = new THREE.SphereGeometry(0.018, 10, 10);
-  [-0.15, 0.15].forEach(function (x) {
-    const hi = new THREE.Mesh(hiGeo, hiMat);
-    hi.position.set(x - 0.018, eyeY + 0.022, eyeZ + 0.045);
+    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.46 : 0.44;
+  [-0.16, 0.16].forEach(function (x) {
+    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+    eye.position.set(x, eyeY, eyeZ);
+    group.add(eye);
+    const hi = new THREE.Mesh(
+      new THREE.SphereGeometry(0.02, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    hi.position.set(x - 0.02, eyeY + 0.025, eyeZ + 0.05);
     group.add(hi);
   });
 
-  // Soft black nose
+  // Nose
   const nose = new THREE.Mesh(
-    new THREE.SphereGeometry(0.045, 14, 12),
-    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.45 })
+    new THREE.SphereGeometry(0.05, 14, 12),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4 })
   );
-  nose.scale.set(1.15, 0.72, 0.95);
+  nose.scale.set(1.2, 0.7, 1);
   nose.position.set(
     0,
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY - 0.14 : headY - 0.1,
-    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.5 : 0.54
+    faceStyle === "CONTINUOUS_NOSE_FIRST" ? headY - 0.16 : headY - 0.12,
+    faceStyle === "CONTINUOUS_NOSE_FIRST" ? 0.54 : 0.58
   );
   group.add(nose);
 
-  // Tiny ear bumps
-  addEllipsoid(group, main, 0.09, 0.07, 0.07, -0.3, headY + 0.3, -0.02);
-  addEllipsoid(group, main, 0.09, 0.07, 0.07, 0.3, headY + 0.3, -0.02);
+  // Simple smile stitch
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.06, 0.012, 8, 16, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0x2a1810 })
+  );
+  smile.rotation.x = Math.PI;
+  smile.position.set(
+    0,
+    nose.position.y - 0.06,
+    nose.position.z - 0.02
+  );
+  group.add(smile);
 
-  // Soft floppy lean
-  group.rotation.x = 0.08;
-  group.position.y = -0.28;
+  // Whisker dots
+  const whiskerMat = new THREE.MeshBasicMaterial({ color: 0x3a2818 });
+  [-0.12, -0.18, 0.12, 0.18].forEach(function (x, i) {
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), whiskerMat);
+    w.position.set(x, nose.position.y - 0.02, nose.position.z - 0.08);
+    if (i < 2) w.position.y -= 0.03 * (i % 2);
+    else w.position.y -= 0.03 * ((i - 2) % 2);
+    group.add(w);
+  });
+
+  // Ear bumps
+  addEllipsoid(group, main, 0.1, 0.08, 0.08, -0.34, headY + 0.32, 0);
+  addEllipsoid(group, main, 0.1, 0.08, 0.08, 0.34, headY + 0.32, 0);
+
+  group.rotation.x = 0.06;
+  group.position.y = -0.35;
   return group;
 }
 
@@ -175,25 +192,26 @@ function makeSoftShadow() {
   const g = ctx.createRadialGradient(
     size / 2,
     size / 2,
-    8,
+    6,
     size / 2,
     size / 2,
     size / 2
   );
-  g.addColorStop(0, "rgba(60,40,25,0.28)");
-  g.addColorStop(0.55, "rgba(60,40,25,0.1)");
-  g.addColorStop(1, "rgba(60,40,25,0)");
+  g.addColorStop(0, "rgba(40,50,70,0.32)");
+  g.addColorStop(0.5, "rgba(40,50,70,0.12)");
+  g.addColorStop(1, "rgba(40,50,70,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    depthWrite: false,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.2), mat);
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.0, 1.4),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(canvas),
+      transparent: true,
+      depthWrite: false,
+    })
+  );
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = -0.02;
+  mesh.position.y = -0.04;
   return mesh;
 }
 
@@ -206,16 +224,27 @@ function createOtter3DPreview(container, options) {
   }
   container.innerHTML = "";
   container.hidden = false;
+  container.style.position = "relative";
+
+  // On-screen proof the new file loaded (helps with cache confusion)
+  const badge = document.createElement("div");
+  badge.textContent = "3D build " + BUILD_TAG + " · cream tummy";
+  badge.style.cssText =
+    "position:absolute;left:10px;top:10px;z-index:2;font:600 12px/1.2 system-ui,sans-serif;" +
+    "background:rgba(255,255,255,0.88);color:#3a2a1a;padding:6px 10px;border-radius:999px;" +
+    "box-shadow:0 1px 4px rgba(0,0,0,0.12);pointer-events:none;";
+  container.appendChild(badge);
 
   const width = container.clientWidth || 420;
-  const height = Math.min(420, Math.max(320, width));
+  const height = Math.min(440, Math.max(340, width));
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xe8e2d8);
-  scene.fog = new THREE.Fog(0xe8e2d8, 6, 14);
+  // Soft blue-gray backdrop — obvious vs old beige
+  scene.background = new THREE.Color(0xd6e4ef);
 
-  const camera = new THREE.PerspectiveCamera(34, width / height, 0.1, 100);
-  camera.position.set(2.0, 1.45, 3.4);
+  const camera = new THREE.PerspectiveCamera(32, width / height, 0.1, 100);
+  // Front-ish view so cream tummy + smile are visible
+  camera.position.set(0.35, 1.15, 3.6);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(width, height);
@@ -229,19 +258,14 @@ function createOtter3DPreview(container, options) {
   renderer.domElement.style.display = "block";
   renderer.domElement.style.cursor = "grab";
 
-  const hemi = new THREE.HemisphereLight(0xfff8ef, 0x8a7360, 0.95);
-  scene.add(hemi);
-  const key = new THREE.DirectionalLight(0xffffff, 0.95);
-  key.position.set(2.5, 5.5, 3.5);
+  scene.add(new THREE.HemisphereLight(0xf5fbff, 0x7a8a9a, 1.0));
+  const key = new THREE.DirectionalLight(0xffffff, 1.0);
+  key.position.set(2, 5, 4);
   key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffd9b8, 0.4);
-  fill.position.set(-3.5, 2.2, -1.5);
+  const fill = new THREE.DirectionalLight(0xffe2c4, 0.45);
+  fill.position.set(-3, 2, 1);
   scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xfff0e0, 0.25);
-  rim.position.set(0, 2, -4);
-  scene.add(rim);
 
   scene.add(makeSoftShadow());
 
@@ -251,12 +275,15 @@ function createOtter3DPreview(container, options) {
   scene.add(otterRoot);
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.55, 0);
+  controls.target.set(0, 0.5, 0);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 1.6;
-  controls.maxDistance = 6;
-  controls.maxPolarAngle = Math.PI * 0.58;
+  controls.minDistance = 1.8;
+  controls.maxDistance = 7;
+  controls.maxPolarAngle = Math.PI * 0.55;
+  // Keep facing mostly forward so tummy stays readable; user can still orbit
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.6;
   controls.update();
 
   let frame = 0;
@@ -266,9 +293,7 @@ function createOtter3DPreview(container, options) {
     if (!alive) return;
     frame = requestAnimationFrame(animate);
     const t = (now - t0) / 1000;
-    // Slow turn + soft bob (plush on a shelf vibe)
-    otterRoot.rotation.y = t * 0.22;
-    otter.position.y = Math.sin(t * 1.2) * 0.025;
+    otter.position.y = Math.sin(t * 1.4) * 0.03;
     controls.update();
     renderer.render(scene, camera);
   }
@@ -276,7 +301,7 @@ function createOtter3DPreview(container, options) {
 
   function onResize() {
     const w = container.clientWidth || 420;
-    const h = Math.min(420, Math.max(320, w));
+    const h = Math.min(440, Math.max(340, w));
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
@@ -300,4 +325,5 @@ function createOtter3DPreview(container, options) {
 
 window.AmigurumiOtter3D = {
   createOtter3DPreview: createOtter3DPreview,
+  BUILD_TAG: BUILD_TAG,
 };
