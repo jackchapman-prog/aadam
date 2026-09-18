@@ -1095,19 +1095,24 @@
     }
     if (openaiKeyRow) openaiKeyRow.hidden = provider !== "openai";
     if (genImageBtn) {
-      if (provider === "3d") genImageBtn.textContent = "Show 3D otter";
+      if (provider === "3d") genImageBtn.textContent = "Show 3D plush";
       else if (provider === "pattern")
         genImageBtn.textContent = "Draw pattern preview";
       else genImageBtn.textContent = "Generate AI preview";
     }
   }
 
-  function waitForOtter3D(timeoutMs) {
+  function waitForPlush3D(timeoutMs) {
     return new Promise(function (resolve, reject) {
       const start = Date.now();
       function tick() {
-        if (window.AmigurumiOtter3D && window.AmigurumiOtter3D.createOtter3DPreview) {
-          resolve(window.AmigurumiOtter3D);
+        if (
+          (window.AmigurumiPlush3D &&
+            window.AmigurumiPlush3D.createPlush3DPreview) ||
+          (window.AmigurumiOtter3D &&
+            window.AmigurumiOtter3D.createOtter3DPreview)
+        ) {
+          resolve(window.AmigurumiPlush3D || window.AmigurumiOtter3D);
           return;
         }
         if (Date.now() - start > (timeoutMs || 4000)) {
@@ -1176,14 +1181,16 @@
           }
 
           if (provider === "3d") {
-            setImageGenStatus("Building 3D otter from your pattern settings…");
-            const Otter3D = await waitForOtter3D(5000);
+            setImageGenStatus("Building 3D plush from your pattern recipe…");
+            const Plush3D = await waitForPlush3D(5000);
+            const gauge = readGauge();
             if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
             if (aiImage) aiImage.hidden = true;
             if (otter3dHost) otter3dHost.hidden = false;
             if (aiImageWrap) aiImageWrap.hidden = false;
-            const gauge = readGauge();
-            Otter3D.createOtter3DPreview(otter3dHost, {
+            const createPreview =
+              Plush3D.createPlush3DPreview || Plush3D.createOtter3DPreview;
+            createPreview(otter3dHost, {
               animal: animal,
               patternRequest: req,
               gauge: gauge,
@@ -1198,19 +1205,19 @@
                 "?";
               aiImagePrompt.textContent =
                 "3D from pattern recipe: " +
-                (req.animalSpecies || "otter") +
+                ((animal && animal.name) || req.animalSpecies || "plush") +
                 " · " +
                 h +
                 '" · SPI ' +
                 gauge.spi +
-                " · " +
-                req.facialConstructionStyle +
                 " · drag to orbit";
             }
             setImageGenStatus(
               animal
-                ? "3D otter sized from your pattern parts (head/body/paddles/tail inches + stitch caps)."
-                : "3D otter shown with fallback sizes — generate a pattern first for recipe accuracy."
+                ? "3D plush ready for " +
+                    (animal.name || "this animal") +
+                    " — sized from the pattern recipe."
+                : "3D shown with fallback sizes — generate a pattern first for recipe accuracy."
             );
           } else if (provider === "pattern") {
             setImageGenStatus("Drawing construction preview from your pattern…");
