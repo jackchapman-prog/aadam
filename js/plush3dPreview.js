@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine41";
+var BUILD_TAG = "engine42";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -507,57 +507,73 @@ function buildUnicornGroup(animal, gauge, mats) {
   // Sitting body: wide hips, softer chest (clear torso, not a sphere)
   const hipR = u(bodyD / 2);
   const bodyRy = u(bodyH / 2);
-  addEllipsoid(group, mats.main, hipR, bodyRy * 0.85, hipR * 0.92, 0, bodyRy * 0.85, 0);
-  addEllipsoid(group, mats.main, hipR * 0.78, bodyRy * 0.55, hipR * 0.75, 0, bodyRy * 1.45, u(0.04));
+  addEllipsoid(group, mats.main, hipR, bodyRy * 0.85, hipR * 0.92, 0, bodyRy * 0.95, 0);
+  addEllipsoid(group, mats.main, hipR * 0.78, bodyRy * 0.55, hipR * 0.75, 0, bodyRy * 1.55, u(0.04));
   // Soft belly
-  addEllipsoid(group, mats.cream, hipR * 0.6, bodyRy * 0.5, u(0.14), 0, bodyRy * 0.8, hipR * 0.7);
+  addEllipsoid(group, mats.cream, hipR * 0.55, bodyRy * 0.45, u(0.14), 0, bodyRy * 0.85, hipR * 0.72);
 
-  // Hoof-tipped legs at wide hip section (sitting)
-  const lR = u(legDia / 2);
-  const lH = u(legLen);
-  const hoofH = lH * 0.22;
+  // Hoof-tipped legs: attach at outer hips, hang FORWARD + DOWN (visible, not inside body).
+  // Recipe diameterIn is the round foot width; the tube above the hoof is thinner.
+  const footR = u(legDia / 2);
+  const tubeR = footR * 0.48;
+  const lH = u(Math.max(legLen, headD * 0.55));
   [-1, 1].forEach(function (side) {
-    const x = side * hipR * 0.55;
-    const z = hipR * 0.35;
-    // Hoof foot (darker)
-    addEllipsoid(group, hoofMat, lR * 1.05, hoofH * 0.55, lR * 1.1, x, hoofH * 0.45, z);
-    // Leg tube
-    addCylinder(
-      group,
-      mats.main,
-      lR * 0.85,
-      lR,
-      lH - hoofH,
-      x,
-      hoofH + (lH - hoofH) * 0.45,
-      z,
-      0.12,
-      0
+    const legGroup = new THREE.Group();
+    // Upper tube (main color)
+    const shaftLen = lH * 0.72;
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(tubeR * 0.85, tubeR, shaftLen, 12),
+      mats.main
     );
+    shaft.position.y = -shaftLen / 2;
+    shaft.castShadow = true;
+    legGroup.add(shaft);
+    // Round hoof at the free end
+    const hoof = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 14, 12),
+      hoofMat
+    );
+    hoof.scale.set(footR * 0.95, footR * 0.55, footR * 1.05);
+    hoof.position.y = -shaftLen - footR * 0.25;
+    hoof.castShadow = true;
+    legGroup.add(hoof);
+    // Sew point: outer hip of the wide body section
+    legGroup.position.set(
+      side * (hipR * 0.92),
+      bodyRy * 0.45,
+      hipR * 0.2
+    );
+    // Dangle forward + slightly out (sitting Molly pose)
+    legGroup.rotation.x = 0.85;
+    legGroup.rotation.z = side * 0.28;
+    group.add(legGroup);
   });
 
-  // Hoof-tipped arms higher on body
-  const aR = u(armDia / 2);
-  const aH = u(armLen);
-  const aHoof = aH * 0.2;
+  // Hoof-tipped arms higher on chest, hanging out/forward (not buried)
+  const aFootR = u(armDia / 2);
+  const aTubeR = aFootR * 0.55;
+  const aH = u(Math.max(armLen, headD * 0.4));
   [-1, 1].forEach(function (side) {
-    const x = side * hipR * 0.85;
-    const y = bodyRy * 1.35;
-    const z = hipR * 0.45;
-    addEllipsoid(group, hoofMat, aR * 0.95, aHoof * 0.5, aR, x, y - aH * 0.35, z + aH * 0.15);
-    const arm = addCylinder(
-      group,
-      mats.main,
-      aR * 0.8,
-      aR,
-      aH - aHoof,
-      x,
-      y,
-      z,
-      0.35,
-      side * 0.45
+    const armGroup = new THREE.Group();
+    const shaftLen = aH * 0.7;
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(aTubeR * 0.85, aTubeR, shaftLen, 12),
+      mats.main
     );
-    arm.rotation.z = side > 0 ? -0.45 : 0.45;
+    shaft.position.y = -shaftLen / 2;
+    armGroup.add(shaft);
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), hoofMat);
+    paw.scale.set(aFootR * 0.9, aFootR * 0.5, aFootR);
+    paw.position.y = -shaftLen - aFootR * 0.2;
+    armGroup.add(paw);
+    armGroup.position.set(
+      side * (hipR * 0.88),
+      bodyRy * 1.45,
+      hipR * 0.35
+    );
+    armGroup.rotation.x = 0.65;
+    armGroup.rotation.z = side * 0.45;
+    group.add(armGroup);
   });
 
   // Sculpted head (separate, sewn on - slightly tapered muzzle)
