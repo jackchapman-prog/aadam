@@ -1201,7 +1201,7 @@
                 (req.animalSpecies || "otter") +
                 " · " +
                 h +
-                '" · SPI " +
+                '" · SPI ' +
                 gauge.spi +
                 " · " +
                 req.facialConstructionStyle +
