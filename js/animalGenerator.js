@@ -82,6 +82,10 @@
         notes.push(
           "For hippos (Harry style): chain-oval muzzle worked into the head as one piece; legs join into the body with a chain bridge; arms join as-you-go; tiny chain tail."
         );
+      } else if (includesAny(name, ["elephant", "mammoth"]) || f.trunk) {
+        notes.push(
+          "For elephants: sitting plush (not standing on four stilts); sew-on trunk + floppy flat ears + optional tusks; JAYG arms/legs like a teddy."
+        );
       } else if (includesAny(name, ["chinchilla"])) {
         notes.push(
           "For chinchillas: head+body one piece (feet up); join feet and bushy fur tail as-you-go; sew small arms; large flat ears with fur edging."
@@ -327,7 +331,8 @@
       features.bigEars = true;
       features.shortSnout = false;
       features.bushyTail = false;
-      plan = "quadruped";
+      features.sitting = true;
+      plan = "sitting";
     }
     if (includesAny(name, ["rhino", "rhinoceros", "bull", "bison", "ram", "goat"])) {
       features.horns = true;
@@ -888,6 +893,9 @@
       "hippo",
       "hippopotamus",
     ]);
+    const isElephant =
+      f.trunk ||
+      includesAny(analysis.name.toLowerCase(), ["elephant", "mammoth"]);
     const isChinchilla = includesAny(analysis.name.toLowerCase(), [
       "chinchilla",
     ]);
@@ -916,7 +924,9 @@
             ? 0.42
             : isHippo
               ? 0.4
-              : isTeddy
+              : isElephant
+                ? 0.42
+                : isTeddy
                 ? 0.4
                 : isOtter
                   ? 0.4
@@ -932,7 +942,9 @@
             ? 0.85
             : isHippo
               ? 0.9
-              : isTeddy
+              : isElephant
+                ? 0.92
+                : isTeddy
                 ? 0.9
                 : isOtter
                   ? 0.95
@@ -948,7 +960,9 @@
             ? 0.18
             : isHippo
               ? 0.32
-              : isTeddy
+              : isElephant
+                ? 0.36
+                : isTeddy
                 ? 0.42
                 : isOtter
                   ? 0.22
@@ -960,7 +974,9 @@
         ? 0.45
         : isHippo
           ? 0.38
-          : isChinchilla
+          : isElephant
+            ? 0.4
+            : isChinchilla
             ? 0.22
             : isOtter
               ? 0.32
@@ -1238,6 +1254,103 @@
         "Sew the body to the head; stuff the neck before closing. Add the tiny chain Tail on the lower back."
       );
       assembly.push("You're done — share your hippo!");
+    } else if (isElephant) {
+      // Sitting elephant plush — trunk + floppy ears, NOT standing on four stilts
+      parts.push({
+        key: "head",
+        label: "Head",
+        shape: "sphere",
+        geometry: "sphere (large, sew to body — no neck tube)",
+        diameterIn: headD,
+        count: 1,
+        finishNotes: [
+          "Grey. Place safety eyes on the lower half of the face, fairly wide.",
+          "Sew trunk and tusks on before attaching the head to the body.",
+        ],
+      });
+      parts.push({
+        key: "trunk",
+        label: "Trunk",
+        shape: "cylinder",
+        geometry: "tapered tube that hangs and curves slightly",
+        diameterIn: headD * 0.28,
+        heightIn: headD * 1.05,
+        count: 1,
+        finishNotes: [
+          "Stuff lightly so it stays bendy. Taper toward the tip.",
+          "Sew to the center of the face so it hangs below the chin.",
+        ],
+      });
+      parts.push({
+        key: "tusk",
+        label: "Tusk",
+        shape: "cone",
+        geometry: "short cream cone",
+        diameterIn: headD * 0.1,
+        heightIn: headD * 0.32,
+        count: 2,
+        finishNotes: ["Cream/ivory. Sew beside the trunk base, angling slightly outward."],
+      });
+      parts.push({
+        key: "ear",
+        label: "Ear (floppy)",
+        shape: "dome",
+        geometry: "large flat oval flap",
+        diameterIn: headD * 0.72,
+        heightIn: headD * 0.1,
+        count: 2,
+        finishNotes: [
+          "Work flat (pancake). Bigger than a cat ear, but not bigger than the head.",
+          "Sew to the sides of the head so they fan out a little.",
+        ],
+      });
+      parts.push({
+        key: "arm",
+        label: "Arm",
+        shape: "sitting-arm",
+        geometry: "short tube, fold-close",
+        diameterIn: headD * 0.2,
+        heightIn: armH,
+        count: 2,
+        finishNotes: ["Join into the body as-you-go (or sew on)."],
+      });
+      parts.push({
+        key: "leg",
+        label: "Leg",
+        shape: "sitting-leg",
+        geometry: "oval foot + short tube",
+        diameterIn: headD * 0.26,
+        heightIn: legH,
+        count: 2,
+        finishNotes: ["Join at the hips as-you-go so the elephant sits."],
+      });
+      parts.push({
+        key: "body",
+        label: "Body",
+        shape: "sitting-body-jayg",
+        geometry: "sitting body (JAYG limbs)",
+        diameterIn: bodyD,
+        heightIn: bodyD * 0.85,
+        count: 1,
+      });
+      parts.push({
+        key: "tail",
+        label: "Rope tail",
+        shape: "cylinder",
+        geometry: "thin rope with tuft tip",
+        diameterIn: headD * 0.06,
+        heightIn: headD * 0.35,
+        count: 1,
+        finishNotes: ["Thin tube. Optional tiny fringe at the tip. Sew at the rump."],
+      });
+
+      assembly.push(
+        "QUALITY TARGET: sitting elephant plush — round body, large head, floppy flat ears, sew-on trunk (not a standing four-leg toy)."
+      );
+      assembly.push("Crochet head, trunk, tusks, and ears first. Sew trunk + tusks + ears onto the head.");
+      assembly.push("Crochet legs and arms; crochet the body joining legs then arms as-you-go.");
+      assembly.push("Sew the finished head to the open top of the body (no neck tube).");
+      assembly.push("Sew the rope tail to the lower back.");
     } else if (isChinchilla) {
       // Owned chinchilla family (~21 cm / 8" incl. ears) — head+body one piece
       parts.push({
@@ -1618,7 +1731,13 @@
               '" muzzle-head on ' +
               H.toFixed(1) +
               '" tall — oval muzzle→head, legs into body, JAYG arms, chain tail.'
-            : isChinchilla
+            : isElephant
+              ? "Sitting elephant: ~" +
+                headD.toFixed(1) +
+                '" head on ' +
+                H.toFixed(1) +
+                '" tall — floppy ears, sew-on trunk, JAYG arms/legs (not standing stilts).'
+              : isChinchilla
               ? "Sitting chinchilla: ~" +
                 headD.toFixed(1) +
                 '" head on ' +
@@ -2460,11 +2579,12 @@
         includesAny(analysis.name.toLowerCase(), ["deer", "fawn", "stag"]);
     }
 
-    // Trunk animals must keep the quadruped recipe (trunk + big ears). Sitting
-    // silhouette would silently drop those parts and 3D becomes a teddy blob.
+    // Trunk / elephant: keep sitting recipe (trunk + floppy ears). Do not force
+    // a standing four-leg quadruped — that does not match the sitting pattern text.
     if (analysis.features.trunk) {
-      analysis.plan = "quadruped";
-      options.posture = "quadruped";
+      analysis.plan = "sitting";
+      analysis.features.sitting = true;
+      options.posture = "sitting";
     }
 
     let built;

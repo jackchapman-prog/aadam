@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine46";
+var BUILD_TAG = "engine47";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -1089,7 +1089,7 @@ function buildDeerGroup(animal, gauge, mats) {
 }
 
 function buildElephantGroup(animal, gauge, mats) {
-  // Baby-elephant amigurumi: round body, huge flat ears, thick curling trunk.
+  // Sitting elephant plush — matches recipe (2 arms + 2 legs + trunk), NOT standing stilts.
   const H = animal.designedHeightIn || 10;
   const spi = gauge.spi;
   const U = 2.15 / H;
@@ -1099,6 +1099,7 @@ function buildElephantGroup(animal, gauge, mats) {
   const bodyP = partByKey(animal, "body");
   const headP = partByKey(animal, "head");
   const legP = partByKey(animal, "leg");
+  const armP = partByKey(animal, "arm");
   const earP = partByKey(animal, "ear");
   const trunkP = partByKey(animal, "trunk");
   const tuskP = partByKey(animal, "tusk");
@@ -1108,120 +1109,122 @@ function buildElephantGroup(animal, gauge, mats) {
     (animal.yarnProfile && animal.yarnProfile.maxStitchCap) ||
     null;
 
-  const bodyLen = inch(bodyP, "lengthIn", H * 0.32);
-  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.36), spi, cap);
-  const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.44), spi, cap);
-  const legD = finishedDiameterIn(inch(legP, "diameterIn", H * 0.16), spi, cap);
-  const legH = inch(legP, "heightIn", H * 0.22);
-  // Ears: larger than a cat, but not bigger than the head
+  const bodyD = finishedDiameterIn(inch(bodyP, "diameterIn", H * 0.38), spi, cap);
+  const bodyH = inch(bodyP, "heightIn", bodyD * 0.85);
+  const headD = finishedDiameterIn(inch(headP, "diameterIn", H * 0.42), spi, cap);
+  const legD = finishedDiameterIn(inch(legP, "diameterIn", headD * 0.26), spi, cap);
+  const legH = inch(legP, "heightIn", headD * 0.36);
+  const armD = finishedDiameterIn(inch(armP, "diameterIn", headD * 0.2), spi, cap);
+  const armH = inch(armP, "heightIn", headD * 0.4);
   const earD = Math.min(
     Math.max(inch(earP, "diameterIn", headD * 0.72), headD * 0.55),
     headD * 0.85
   );
-  const trunkBaseD = Math.max(inch(trunkP, "diameterIn", headD * 0.3), headD * 0.26);
-  const trunkLen = Math.max(inch(trunkP, "heightIn", headD * 1.2), headD * 1.05);
+  const trunkBaseD = Math.max(inch(trunkP, "diameterIn", headD * 0.28), headD * 0.22);
+  const trunkLen = Math.max(inch(trunkP, "heightIn", headD * 1.05), headD * 0.9);
 
   const group = new THREE.Group();
-  const bRx = u(Math.max(bodyLen, bodyD * 0.95) / 2);
-  const bRy = u(bodyD / 2);
-  const legLen = u(legH);
-  const legR = u(legD / 2);
-  const bellyY = legLen + bRy * 0.75;
+  const bodyRx = u(bodyD / 2);
+  const bodyRy = u(bodyH / 2);
+  const bodyY = bodyRy + u(legH) * 0.25;
 
-  // Chubby round barrel (not a horse oval)
-  addEllipsoid(group, mats.main, bRx * 1.05, bRy, bRy * 1.05, 0, bellyY, 0);
+  // Round sitting body
+  addEllipsoid(group, mats.main, bodyRx * 1.05, bodyRy, bodyRx, 0, bodyY, 0);
   addEllipsoid(
     group,
     mats.cream,
-    bRx * 0.6,
-    bRy * 0.55,
+    bodyRx * 0.65,
+    bodyRy * 0.55,
     u(0.14),
     0,
-    bellyY - bRy * 0.05,
-    bRy * 0.9
+    bodyY - bodyRy * 0.05,
+    bodyRx * 0.85
   );
 
-  // Short stubby pillars
-  const stance = [
-    [0.5, 0.48],
-    [0.5, -0.48],
-    [-0.48, 0.48],
-    [-0.48, -0.48],
-  ];
-  stance.forEach(function (xz) {
+  // Two hip legs (sitting) — not four stilts
+  const legR = u(legD / 2);
+  const legLen = u(legH);
+  [-1, 1].forEach(function (side) {
+    const lg = new THREE.Group();
+    lg.position.set(side * bodyRx * 0.45, bodyY - bodyRy * 0.55, bodyRx * 0.35);
+    lg.rotation.x = 0.55;
+    lg.rotation.z = side * 0.15;
+    group.add(lg);
+    const tube = new THREE.Mesh(
+      new THREE.CylinderGeometry(legR * 0.9, legR * 1.1, legLen, 12),
+      mats.main
+    );
+    tube.position.y = -legLen * 0.35;
+    tube.castShadow = true;
+    lg.add(tube);
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(legR * 1.15, 12, 10), mats.main);
+    foot.scale.set(1.1, 0.55, 1.2);
+    foot.position.y = -legLen * 0.7;
+    lg.add(foot);
+  });
+
+  // Two arms
+  const aR = u(armD / 2);
+  const aLen = u(armH);
+  [-1, 1].forEach(function (side) {
     addCylinder(
       group,
       mats.main,
-      legR * 0.92,
-      legR * 1.08,
-      legLen,
-      bRx * xz[0],
-      legLen * 0.48,
-      bRy * xz[1],
-      0,
-      0
+      aR,
+      aR * 0.9,
+      aLen,
+      side * bodyRx * 0.9,
+      bodyY + bodyRy * 0.05,
+      bodyRx * 0.35,
+      0.35,
+      side * 0.45
     );
   });
 
-  // Big head flush on the chest (no neck)
+  // Large head on top (no neck)
   const headR = u(headD / 2);
-  const headX = bRx * 0.55 + headR * 0.55;
-  const headY = bellyY + bRy * 0.35;
-  addEllipsoid(group, mats.main, headR * 1.08, headR, headR * 1.02, headX, headY, 0);
-  // Soft forehead bump
-  addEllipsoid(
-    group,
-    mats.main,
-    headR * 0.55,
-    headR * 0.4,
-    headR * 0.55,
-    headX + headR * 0.15,
-    headY + headR * 0.55,
-    0
-  );
+  const headY = bodyY + bodyRy + headR * 0.65;
+  addEllipsoid(group, mats.main, headR * 1.05, headR, headR, 0, headY, u(0.05));
 
-  // Floppy ear flaps — flat pancakes on the sides (readable, not cartoon-giant)
+  // Floppy ear flaps (moderate)
   const eHalf = u(earD / 2);
   const eThick = u(Math.max(headD * 0.05, 0.08));
   [-1, 1].forEach(function (side) {
     const earGroup = new THREE.Group();
-    earGroup.position.set(headX, headY + headR * 0.1, side * headR * 0.7);
-    earGroup.rotation.y = side * -0.25;
-    earGroup.rotation.z = side * 0.08;
+    earGroup.position.set(side * headR * 0.55, headY + headR * 0.1, -headR * 0.05);
+    earGroup.rotation.y = side * -0.35;
+    earGroup.rotation.z = side * -0.2;
     group.add(earGroup);
-
-    const flap = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 16), mats.main);
-    flap.scale.set(eThick, eHalf * 0.95, eHalf * 0.85);
-    flap.position.set(0, -eHalf * 0.2, side * eHalf * 0.35);
+    const flap = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 14), mats.main);
+    flap.scale.set(eHalf * 0.75, eHalf * 0.95, eThick);
+    flap.position.set(side * eHalf * 0.25, -eHalf * 0.15, 0);
     flap.castShadow = true;
     earGroup.add(flap);
-
-    const inner = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), mats.cream);
-    inner.scale.set(eThick * 0.4, eHalf * 0.62, eHalf * 0.55);
-    inner.position.set(eThick * 0.55, -eHalf * 0.18, side * eHalf * 0.32);
+    const inner = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 12), mats.cream);
+    inner.scale.set(eHalf * 0.5, eHalf * 0.65, eThick * 0.4);
+    inner.position.set(side * eHalf * 0.2, -eHalf * 0.12, eThick * 0.5);
     earGroup.add(inner);
   });
 
-  // Thick curling trunk hanging in front of the face
+  // Trunk hanging down the front of the face
   const tBase = u(trunkBaseD / 2);
   const tLen = u(trunkLen);
   const trunkRoot = new THREE.Group();
-  trunkRoot.position.set(headX + headR * 0.7, headY - headR * 0.15, 0);
-  trunkRoot.rotation.z = 1.15;
+  trunkRoot.position.set(0, headY - headR * 0.15, headR * 0.75);
+  trunkRoot.rotation.x = 0.35;
   group.add(trunkRoot);
-
   const segs = 4;
   const segLen = tLen / segs;
   let parent = trunkRoot;
   for (let i = 0; i < segs; i++) {
     const hinge = new THREE.Group();
     hinge.position.y = i === 0 ? 0 : -segLen;
-    if (i > 0) hinge.rotation.z = 0.32;
+    if (i > 0) hinge.rotation.x = 0.28;
     parent.add(hinge);
     const r0 = tBase * (1 - i * 0.16);
     const r1 = tBase * (1 - (i + 1) * 0.16);
     const seg = new THREE.Mesh(
-      new THREE.CylinderGeometry(Math.max(0.025, r1), Math.max(0.03, r0), segLen, 14),
+      new THREE.CylinderGeometry(Math.max(0.02, r1), Math.max(0.025, r0), segLen, 12),
       mats.main
     );
     seg.position.y = -segLen * 0.5;
@@ -1229,22 +1232,18 @@ function buildElephantGroup(animal, gauge, mats) {
     hinge.add(seg);
     parent = hinge;
   }
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(tBase * 0.35, 10, 8), mats.main);
-  tip.position.y = -segLen * 0.15;
-  parent.add(tip);
 
   if (tuskP) {
     const td = u(inch(tuskP, "diameterIn", headD * 0.1) / 2);
-    const th = u(inch(tuskP, "heightIn", headD * 0.35));
+    const th = u(inch(tuskP, "heightIn", headD * 0.32));
     [-1, 1].forEach(function (side) {
       const tusk = new THREE.Mesh(
         new THREE.CylinderGeometry(td * 0.25, td, th, 10),
         mats.cream
       );
-      tusk.position.set(headX + headR * 0.55, headY - headR * 0.4, side * headR * 0.32);
-      tusk.rotation.z = 0.95;
-      tusk.rotation.y = side * -0.35;
-      tusk.rotation.x = side * 0.2;
+      tusk.position.set(side * headR * 0.28, headY - headR * 0.35, headR * 0.7);
+      tusk.rotation.x = 0.85;
+      tusk.rotation.z = side * -0.25;
       tusk.castShadow = true;
       group.add(tusk);
     });
@@ -1259,41 +1258,23 @@ function buildElephantGroup(animal, gauge, mats) {
       td * 0.5,
       td,
       th,
-      -bRx * 0.95,
-      bellyY - bRy * 0.15,
       0,
-      0.95,
-      0
-    );
-    addEllipsoid(
-      group,
-      mats.deep,
-      td * 1.4,
-      td * 1.4,
-      td * 1.4,
-      -bRx * 0.95,
-      bellyY - bRy * 0.15 - th * 0.55,
+      bodyY - bodyRy * 0.2,
+      -bodyRx * 0.95,
+      0.7,
       0
     );
   }
 
-  const eyeR = headR * 0.1;
-  [-1, 1].forEach(function (side) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), mats.black);
-    eye.scale.setScalar(eyeR);
-    eye.position.set(headX + headR * 0.72, headY + headR * 0.05, side * headR * 0.42);
-    group.add(eye);
-  });
-
-  group.position.y = -u(0.05);
-  group.rotation.y = 0.55;
+  addEyes(group, headR, headY, u(0.05), mats.black);
+  group.position.y = -u(bodyH * 0.2);
   return {
     group: group,
     label:
-      "elephant baby - ears " +
-      earD.toFixed(1) +
-      '" - trunk ' +
+      "elephant sitting - trunk " +
       trunkLen.toFixed(1) +
+      '" - ears " +
+      earD.toFixed(1) +
       '"',
   };
 }

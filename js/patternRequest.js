@@ -182,6 +182,8 @@
         n
       )
     ) {
+      // Elephant is a sitting plush with a trunk — not standing stilts
+      if (/\b(elephant|mammoth)\b/.test(n)) return "SITTING_UPRIGHT_WIDE_HIP";
       return "STANDING_QUADRUPED";
     }
 
