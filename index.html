@@ -239,19 +239,22 @@
 
       <section id="image-preview-panel" class="form image-gen">
         <fieldset>
-          <legend>Plush image preview</legend>
+          <legend>Plush preview</legend>
           <p class="hint">
-            Builds a crochet-specific prompt from your settings, then generates a
-            preview. <strong>Free test</strong> needs no key (good while learning).
-            OpenAI DALL·E is optional and paid.
-            <span class="hint">App build: engine24</span>
+            <strong>From your pattern</strong> draws the toy the app will crochet
+            (pose, face path, pieces) — free, no API. AI image is only a loose
+            guess and often wrong.
+            <span class="hint">App build: engine25</span>
           </p>
           <div class="field-row">
             <label>
-              Image provider
+              Preview mode
               <select id="image-provider" name="imageProvider">
-                <option value="free" selected>Free test (no API key)</option>
-                <option value="openai">OpenAI DALL·E 3 (paid)</option>
+                <option value="pattern" selected>
+                  From pattern (recommended, free)
+                </option>
+                <option value="free">AI guess — free (unreliable)</option>
+                <option value="openai">AI guess — OpenAI DALL·E (paid)</option>
               </select>
             </label>
           </div>
@@ -270,7 +273,7 @@
           </div>
           <div class="field-row image-gen-actions">
             <button type="button" id="gen-image-btn" class="primary">
-              Generate plush preview
+              Draw pattern preview
             </button>
             <button type="button" id="clear-api-key-btn" class="ghost">
               Clear saved key
@@ -278,7 +281,14 @@
           </div>
           <p id="image-gen-status" class="hint ref-status" hidden></p>
           <div id="ai-image-wrap" class="ai-image-wrap" hidden>
-            <img id="ai-image" alt="AI-generated plush preview" />
+            <canvas
+              id="pattern-preview-canvas"
+              width="512"
+              height="512"
+              class="pattern-preview-canvas"
+              hidden
+            ></canvas>
+            <img id="ai-image" alt="Plush preview" hidden />
             <p id="ai-image-prompt" class="hint"></p>
           </div>
         </fieldset>
@@ -293,13 +303,14 @@
       </section>
     </main>
 
-    <script src="js/shapes.js?v=engine24"></script>
-    <script src="js/patternRequest.js?v=engine24"></script>
-    <script src="js/animalGenerator.js?v=engine24"></script>
-    <script src="js/patternMath.js?v=engine24"></script>
-    <script src="js/photoAnalysis.js?v=engine24"></script>
-    <script src="js/promptCompiler.js?v=engine24"></script>
-    <script src="js/imageGen.js?v=engine24"></script>
-    <script src="js/app.js?v=engine24"></script>
+    <script src="js/shapes.js?v=engine25"></script>
+    <script src="js/patternRequest.js?v=engine25"></script>
+    <script src="js/animalGenerator.js?v=engine25"></script>
+    <script src="js/patternMath.js?v=engine25"></script>
+    <script src="js/photoAnalysis.js?v=engine25"></script>
+    <script src="js/promptCompiler.js?v=engine25"></script>
+    <script src="js/patternPreview.js?v=engine25"></script>
+    <script src="js/imageGen.js?v=engine25"></script>
+    <script src="js/app.js?v=engine25"></script>
   </body>
 </html>

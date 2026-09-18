@@ -260,6 +260,7 @@ label.grow {
   margin-top: 0.75rem;
 }
 
+.pattern-preview-canvas,
 .ai-image-wrap img {
   display: block;
   width: 100%;

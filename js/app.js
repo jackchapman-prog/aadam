@@ -25,6 +25,7 @@
   const imageGenStatus = document.getElementById("image-gen-status");
   const aiImageWrap = document.getElementById("ai-image-wrap");
   const aiImage = document.getElementById("ai-image");
+  const patternPreviewCanvas = document.getElementById("pattern-preview-canvas");
   const aiImagePrompt = document.getElementById("ai-image-prompt");
 
   let photoMetrics = null;
@@ -1084,30 +1085,52 @@
   }
 
   function syncImageProviderUi() {
-    if (!window.AmigurumiImageGen || !imageProviderSelect) return;
-    const provider = imageProviderSelect.value === "openai" ? "openai" : "free";
-    window.AmigurumiImageGen.setProvider(provider);
+    if (!imageProviderSelect) return;
+    const provider = imageProviderSelect.value || "pattern";
+    if (window.AmigurumiImageGen && window.AmigurumiImageGen.setProvider) {
+      // Only persist AI providers in imageGen storage
+      if (provider === "free" || provider === "openai") {
+        window.AmigurumiImageGen.setProvider(provider);
+      }
+    }
     if (openaiKeyRow) openaiKeyRow.hidden = provider !== "openai";
+    if (genImageBtn) {
+      genImageBtn.textContent =
+        provider === "pattern"
+          ? "Draw pattern preview"
+          : "Generate AI preview";
+    }
   }
 
   function initImageGenUi() {
-    if (!window.AmigurumiImageGen) return;
-
     if (imageProviderSelect) {
-      imageProviderSelect.value = window.AmigurumiImageGen.getProvider();
-      imageProviderSelect.addEventListener("change", syncImageProviderUi);
+      // Default to pattern preview (not AI)
+      const saved =
+        window.AmigurumiImageGen && window.AmigurumiImageGen.getProvider
+          ? window.AmigurumiImageGen.getProvider()
+          : "pattern";
+      // Prefer pattern unless user explicitly chose AI this session via select
+      if (!imageProviderSelect.dataset.touched) {
+        imageProviderSelect.value = "pattern";
+      } else if (saved === "openai" || saved === "free") {
+        imageProviderSelect.value = saved;
+      }
+      imageProviderSelect.addEventListener("change", function () {
+        imageProviderSelect.dataset.touched = "1";
+        syncImageProviderUi();
+      });
       syncImageProviderUi();
     }
 
-    if (openaiKeyInput) {
-      const saved = window.AmigurumiImageGen.getApiKey();
-      if (saved) openaiKeyInput.value = saved;
+    if (openaiKeyInput && window.AmigurumiImageGen) {
+      const savedKey = window.AmigurumiImageGen.getApiKey();
+      if (savedKey) openaiKeyInput.value = savedKey;
       openaiKeyInput.addEventListener("change", function () {
         window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
       });
     }
 
-    if (clearApiKeyBtn) {
+    if (clearApiKeyBtn && window.AmigurumiImageGen) {
       clearApiKeyBtn.addEventListener("click", function () {
         if (openaiKeyInput) openaiKeyInput.value = "";
         window.AmigurumiImageGen.setApiKey("");
@@ -1122,23 +1145,13 @@
           setImageGenStatus("Could not build pattern request from the form.", true);
           return;
         }
-        const provider =
-          imageProviderSelect && imageProviderSelect.value === "openai"
-            ? "openai"
-            : "free";
-        window.AmigurumiImageGen.setProvider(provider);
-        if (provider === "openai" && openaiKeyInput) {
-          window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
-        }
+        const provider = imageProviderSelect
+          ? imageProviderSelect.value
+          : "pattern";
 
         genImageBtn.disabled = true;
-        setImageGenStatus(
-          provider === "free"
-            ? "Generating free test preview (no key)…"
-            : "Generating plush preview with DALL·E 3…"
-        );
+
         try {
-          // Refresh the current pattern recipe so the image matches this generate
           let animal = null;
           try {
             const resultPack = generatePatternText();
@@ -1152,37 +1165,79 @@
             animal = null;
           }
 
-          const result = await window.AmigurumiImageGen.generatePlushImage({
-            patternRequest: req,
-            displayName: req._displayName || animalNameInput.value,
-            animal: animal,
-            description: animal && animal.description,
-            blurb: animalBlurb ? animalBlurb.textContent : "",
-            provider: provider,
-            apiKey: openaiKeyInput ? openaiKeyInput.value : "",
-          });
-          if (aiImage) {
-            aiImage.src = result.url;
-            aiImage.onload = function () {
-              setImageGenStatus(
-                provider === "free"
-                  ? "Preview ready from your pattern blueprint (free quality varies). Check the prompt below — it should name your animal + silhouette + face path."
-                  : "Preview ready from your pattern blueprint."
-              );
-            };
-          }
-          if (aiImageWrap) aiImageWrap.hidden = false;
-          if (aiImagePrompt) {
-            aiImagePrompt.textContent =
-              "Prompt locked to pattern: " +
-              (result.revisedPrompt || result.prompt);
-          }
-          if (!aiImage) {
-            setImageGenStatus("Preview ready.");
+          if (provider === "pattern") {
+            setImageGenStatus("Drawing construction preview from your pattern…");
+            if (!window.AmigurumiPatternPreview || !patternPreviewCanvas) {
+              throw new Error("Pattern preview module missing.");
+            }
+            window.AmigurumiPatternPreview.renderPatternPreview(
+              patternPreviewCanvas,
+              req,
+              animal
+            );
+            patternPreviewCanvas.hidden = false;
+            if (aiImage) aiImage.hidden = true;
+            if (aiImageWrap) aiImageWrap.hidden = false;
+            if (aiImagePrompt) {
+              aiImagePrompt.textContent =
+                "Drawn from your locked recipe: " +
+                req.animalSpecies +
+                " · " +
+                (req.bodySilhouette || "auto") +
+                " · " +
+                req.facialConstructionStyle +
+                (animal && animal.parts
+                  ? " · pieces: " +
+                    animal.parts
+                      .map(function (p) {
+                        return p.label || p.key;
+                      })
+                      .join(", ")
+                  : "");
+            }
+            setImageGenStatus(
+              "Pattern construction preview ready — this is what the app will crochet (not an AI photo)."
+            );
+          } else {
+            if (!window.AmigurumiImageGen) {
+              throw new Error("Image module missing.");
+            }
+            window.AmigurumiImageGen.setProvider(provider);
+            if (provider === "openai" && openaiKeyInput) {
+              window.AmigurumiImageGen.setApiKey(openaiKeyInput.value);
+            }
+            setImageGenStatus(
+              provider === "free"
+                ? "AI guess (free) — may not match your pattern…"
+                : "AI guess (OpenAI)…"
+            );
+            const result = await window.AmigurumiImageGen.generatePlushImage({
+              patternRequest: req,
+              displayName: req._displayName || animalNameInput.value,
+              animal: animal,
+              description: animal && animal.description,
+              blurb: animalBlurb ? animalBlurb.textContent : "",
+              provider: provider,
+              apiKey: openaiKeyInput ? openaiKeyInput.value : "",
+            });
+            if (patternPreviewCanvas) patternPreviewCanvas.hidden = true;
+            if (aiImage) {
+              aiImage.hidden = false;
+              aiImage.src = result.url;
+            }
+            if (aiImageWrap) aiImageWrap.hidden = false;
+            if (aiImagePrompt) {
+              aiImagePrompt.textContent =
+                "AI guess prompt (not a faithful crochet render): " +
+                (result.revisedPrompt || result.prompt);
+            }
+            setImageGenStatus(
+              "AI preview ready — treat as inspiration only; use From pattern for an accurate build preview."
+            );
           }
         } catch (err) {
           setImageGenStatus(
-            (err && err.message) || "Could not generate image.",
+            (err && err.message) || "Could not create preview.",
             true
           );
         } finally {
