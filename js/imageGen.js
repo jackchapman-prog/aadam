@@ -155,7 +155,7 @@
       const apiKey = String(options.apiKey || getApiKey() || "").trim();
       if (!apiKey) {
         throw new Error(
-          "OpenAI selected: paste an API key, or switch provider to Free test."
+          "OpenAI is selected. Switch Image provider to “Free test (no API key)” — or paste a key only if you want paid DALL·E."
         );
       }
       return generateWithOpenAI(prompt, apiKey, options);
