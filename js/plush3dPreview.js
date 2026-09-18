@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine40";
+var BUILD_TAG = "engine41";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -142,8 +142,8 @@ function addEyes(group, headR, headY, headZ, matBlack) {
 }
 
 /**
- * PATH B — CONTINUOUS_NOSE_FIRST (matches shapes.buildOtterContinuousHeadPattern):
- * Tip MR → cream R1–7 ending at 24 sts → clean switch → main expands/closes at back.
+ * PATH B - CONTINUOUS_NOSE_FIRST (matches shapes.buildOtterContinuousHeadPattern):
+ * Tip MR -> cream R1-7 ending at 24 sts -> clean switch -> main expands/closes at back.
  * Eyes sit just above the cream snout at the switch line.
  */
 function addContinuousNoseFirstHead(group, mats, opts) {
@@ -152,7 +152,7 @@ function addContinuousNoseFirstHead(group, mats, opts) {
   const rpi = opts.rpi;
   const u = opts.u;
   const headY = opts.headY;
-  const creamEndSts = 24; // pattern R6–R7
+  const creamEndSts = 24; // pattern R6-R7
   const tipSts = 6;
   const creamDepthIn = Math.max(0.5, 7 / Math.max(1, rpi));
   const creamEndD = actualDiameterIn(creamEndSts, spi);
@@ -165,7 +165,7 @@ function addContinuousNoseFirstHead(group, mats, opts) {
   // Color-switch plane: front of the main-color head mass
   const switchZ = headR * 0.05;
 
-  // MAIN: head cavity BEHIND the switch (closes at the back) — not a full face sphere
+  // MAIN: head cavity BEHIND the switch (closes at the back) - not a full face sphere
   addEllipsoid(
     group,
     mats.main,
@@ -178,7 +178,7 @@ function addContinuousNoseFirstHead(group, mats, opts) {
   );
 
   // CREAM snout: tip at front (+Z), widens to 24-st cross-section at switch
-  // CylinderGeometry(radiusTop, radiusBottom): top=+Y → after rot X π/2 becomes +Z
+  // CylinderGeometry(radiusTop, radiusBottom): top=+Y -> after rot X pi/2 becomes +Z
   const creamMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(tipR, creamEndR, creamLen, 24, 1, false),
     mats.cream
@@ -189,7 +189,7 @@ function addContinuousNoseFirstHead(group, mats, opts) {
   creamMesh.receiveShadow = true;
   group.add(creamMesh);
 
-  // Soft cream lower-jaw / cheek from R1–7 mask (still one cream piece)
+  // Soft cream lower-jaw / cheek from R1-7 mask (still one cream piece)
   addEllipsoid(
     group,
     mats.cream,
@@ -422,7 +422,7 @@ function buildOtterGroup(animal, gauge, faceStyle, mats) {
       u: u,
       headY: headY,
     });
-    faceNote = "CONTINUOUS tip→R7 cream→main";
+    faceNote = "CONTINUOUS tip->R7 cream->main";
   } else {
     addSeparatePatchHead(group, mats, {
       headD: headD,
@@ -441,19 +441,19 @@ function buildOtterGroup(animal, gauge, faceStyle, mats) {
   return {
     group: group,
     label:
-      "otter · " +
+      "otter - " +
       faceNote +
-      " · arms " +
+      " - arms " +
       armSts +
-      "sts · tail " +
+      "sts - tail " +
       tailBaseSts +
       "sts" +
-      (stitchTrue ? " · stitch-true" : ""),
+      (stitchTrue ? " - stitch-true" : ""),
   };
 }
 
 /**
- * Molly-style sitting unicorn — NOT a standing horse, NOT one giant ball.
+ * Molly-style sitting unicorn - NOT a standing horse, NOT one giant ball.
  * Sitting body + hoof limbs + sculpted head + thin horn + spiral mane/tail locks.
  */
 function buildUnicornGroup(animal, gauge, mats) {
@@ -560,7 +560,7 @@ function buildUnicornGroup(animal, gauge, mats) {
     arm.rotation.z = side > 0 ? -0.45 : 0.45;
   });
 
-  // Sculpted head (separate, sewn on — slightly tapered muzzle)
+  // Sculpted head (separate, sewn on - slightly tapered muzzle)
   const headR = u(headD / 2);
   const headY = bodyRy * 1.85 + headR * 0.9;
   const headZ = u(0.08);
@@ -691,9 +691,9 @@ function buildUnicornGroup(animal, gauge, mats) {
   return {
     group: group,
     label:
-      "Molly sitting · horn · " +
+      "Molly sitting - horn - " +
       maneCount +
-      " mane locks · hoof limbs",
+      " mane locks - hoof limbs",
   };
 }
 
@@ -803,7 +803,7 @@ function buildSittingGroup(animal, gauge, mats) {
 
   addEyes(group, headR, headY, u(0.05), mats.black);
   group.position.y = -u(bodyH * 0.3);
-  return { group: group, label: "sitting · recipe inches" };
+  return { group: group, label: "sitting - recipe inches" };
 }
 
 function buildDeerGroup(animal, gauge, mats) {
@@ -896,7 +896,7 @@ function buildDeerGroup(animal, gauge, mats) {
   nose.position.set(0, headY - headR * 0.28, headZ + headR * 0.95 + mzL * 0.3);
   group.add(nose);
 
-  // Flat layered ears (outer main + cream inner) — leaf/flat, not stuffed balls
+  // Flat layered ears (outer main + cream inner) - leaf/flat, not stuffed balls
   const eOut = u(earD / 2);
   const eIn = u(earInnerD / 2);
   [-1, 1].forEach(function (side) {
@@ -926,7 +926,7 @@ function buildDeerGroup(animal, gauge, mats) {
     inner.rotation.x = -0.2;
   });
 
-  // Branched cream antlers (beam + tine = Y) between the ears — pattern cream, not dark
+  // Branched cream antlers (beam + tine = Y) between the ears - pattern cream, not dark
   const beamH = u(antlerH);
   const beamR = u(antlerD / 2);
   const tH = u(tineH);
@@ -1024,9 +1024,9 @@ function buildDeerGroup(animal, gauge, mats) {
   return {
     group: group,
     label:
-      "dangling deer · antlers Y · muzzle · ears · " +
+      "dangling deer - antlers Y - muzzle - ears - " +
       headD.toFixed(1) +
-      '" head',
+      " in head",
   };
 }
 
@@ -1126,7 +1126,7 @@ function buildQuadGroup(animal, gauge, mats) {
 
   group.position.y = -u(0.15);
   group.rotation.y = 0.35;
-  return { group: group, label: "quadruped · recipe inches" };
+  return { group: group, label: "quadruped - recipe inches" };
 }
 
 function buildBirdGroup(animal, gauge, mats) {
@@ -1163,7 +1163,7 @@ function buildBirdGroup(animal, gauge, mats) {
   addEllipsoid(group, mats.accent, u(0.12), u(0.08), u(0.18), 0, u(bodyLen * 0.75), r * 0.95);
   addEyes(group, r * 0.7, u(bodyLen * 0.75), 0, mats.black);
   group.position.y = -u(0.1);
-  return { group: group, label: "bird · recipe inches" };
+  return { group: group, label: "bird - recipe inches" };
 }
 
 function buildFishGroup(animal, gauge, mats) {
@@ -1186,7 +1186,7 @@ function buildFishGroup(animal, gauge, mats) {
   addEyes(group, u(bodyD * 0.35), u(bodyD / 2), u(bodyLen / 2) * 0.55, mats.black);
   group.rotation.y = Math.PI / 2;
   group.position.y = -u(0.1);
-  return { group: group, label: "fish · recipe inches" };
+  return { group: group, label: "fish - recipe inches" };
 }
 
 function buildOctopusGroup(animal, gauge, mats) {
@@ -1222,7 +1222,7 @@ function buildOctopusGroup(animal, gauge, mats) {
   }
   addEyes(group, headR, headR * 1.15, 0, mats.black);
   group.position.y = -u(0.15);
-  return { group: group, label: "octopus · recipe inches" };
+  return { group: group, label: "octopus - recipe inches" };
 }
 
 function buildTurtleGroup(animal, gauge, mats) {
@@ -1259,7 +1259,7 @@ function buildTurtleGroup(animal, gauge, mats) {
   });
   addEyes(group, headR, sR * 0.5, sR * 0.95, mats.black);
   group.position.y = -u(0.05);
-  return { group: group, label: "turtle · recipe inches" };
+  return { group: group, label: "turtle - recipe inches" };
 }
 
 function buildPlushGroup(animal, gauge, faceStyle) {
@@ -1330,11 +1330,11 @@ function createPlush3DPreview(container, options) {
   badge.textContent =
     "3D " +
     BUILD_TAG +
-    " · " +
+    " - " +
     name +
-    " · " +
+    " - " +
     H.toFixed(1) +
-    '" · ' +
+    '" - ' +
     (built.label || built.family);
   badge.style.cssText =
     "position:absolute;left:10px;top:10px;z-index:2;font:600 11px/1.3 system-ui,sans-serif;" +
@@ -1372,7 +1372,7 @@ function createPlush3DPreview(container, options) {
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.55, 0);
-  // Deer is taller (dangling legs) — frame more of the stack
+  // Deer is taller (dangling legs) - frame more of the stack
   if (built.family === "deer") {
     controls.target.set(0, 0.35, 0);
     camera.position.set(0.55, 1.05, 4.1);
