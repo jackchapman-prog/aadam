@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine34";
+var BUILD_TAG = "engine35";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -330,27 +330,29 @@ function buildOtterGroup(m) {
     bodyRz * 0.85
   );
 
-  // Tail backrest: thick BASE sewn LOW on the rump; tip leans UP behind the body
-  // (matches assembly: "sew low on the back so the thick base props the body")
+  // Tail backrest (assembly: sew thick BASE low on the rump; tip leans UP behind)
   const tailBaseR = u(m.tailBaseD / 2);
-  const tipR = u(m.tailTipD / 2);
+  const tipR = u(Math.max(m.tailTipD, m.tailBaseD * 0.22) / 2);
   const tLen = u(m.tailLen);
-  const tailGroup = new THREE.Group();
-  // CylinderGeometry(radiusTop, radiusBottom): tip at +Y, thick base at -Y
+  // Sew point = lower rear / rump (near the hips, not the upper back)
+  const sew = new THREE.Vector3(0, bodyY - bodyRy * 0.72, -bodyRz * 0.98);
+  // Tip aims up + slightly back (backrest), never down or out of the shoulders
+  const tipDir = new THREE.Vector3(0, 0.88, -0.47).normalize();
+  const tipPos = sew.clone().add(tipDir.clone().multiplyScalar(tLen));
+  const mid = new THREE.Vector3().addVectors(sew, tipPos).multiplyScalar(0.5);
+  // radiusTop=tip (thin), radiusBottom=base (thick) — cylinder +Y goes sew→tip
   const tailMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(tipR, tailBaseR, tLen, 20, 1, false),
+    new THREE.CylinderGeometry(tipR, tailBaseR, tLen, 22, 1, false),
     deep
   );
-  // Shift so the BASE (local -Y) sits at the group origin (sew point)
-  tailMesh.position.y = tLen / 2;
+  tailMesh.position.copy(mid);
+  tailMesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    tipPos.clone().sub(sew).normalize()
+  );
   tailMesh.castShadow = true;
   tailMesh.receiveShadow = true;
-  tailGroup.add(tailMesh);
-  // Sew point: lower rear of body (not mid/upper back)
-  tailGroup.position.set(0, bodyY - bodyRy * 0.42, -bodyRz * 0.88);
-  // Tip leans up and slightly back (−X rotation moves +Y toward −Z)
-  tailGroup.rotation.x = -0.48;
-  group.add(tailGroup);
+  group.add(tailMesh);
 
   // Paddle feet — oval sole size from chain/SPI
   const pLen = u(m.paddleLen / 2);
