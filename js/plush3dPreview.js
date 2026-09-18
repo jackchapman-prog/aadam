@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine36";
+var BUILD_TAG = "engine37";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -130,6 +130,142 @@ function addEyes(group, headR, headY, headZ, matBlack) {
     eye.position.set(side * headR * 0.35, headY + headR * 0.1, headZ + headR * 0.82);
     group.add(eye);
   });
+}
+
+/**
+ * PATH B — CONTINUOUS_NOSE_FIRST (matches shapes.buildOtterContinuousHeadPattern):
+ * Tip MR → cream R1–7 ending at 24 sts → clean switch → main expands/closes at back.
+ * Eyes sit just above the cream snout at the switch line.
+ */
+function addContinuousNoseFirstHead(group, mats, opts) {
+  const headD = opts.headD;
+  const spi = opts.spi;
+  const rpi = opts.rpi;
+  const u = opts.u;
+  const headY = opts.headY;
+  const creamEndSts = 24; // pattern R6–R7
+  const tipSts = 6;
+  const creamDepthIn = Math.max(0.5, 7 / Math.max(1, rpi));
+  const creamEndD = actualDiameterIn(creamEndSts, spi);
+  const tipD = actualDiameterIn(tipSts, spi);
+  const headR = u(headD / 2);
+  const creamEndR = Math.min(u(creamEndD / 2), headR * 0.95);
+  const tipR = Math.max(u(tipD / 2), headR * 0.12);
+  const creamLen = u(creamDepthIn);
+
+  // Color-switch plane: front of the main-color head mass
+  const switchZ = headR * 0.05;
+
+  // MAIN: head cavity BEHIND the switch (closes at the back) — not a full face sphere
+  addEllipsoid(
+    group,
+    mats.main,
+    headR,
+    headR * 0.96,
+    headR * 0.88,
+    0,
+    headY,
+    switchZ - headR * 0.62
+  );
+
+  // CREAM snout: tip at front (+Z), widens to 24-st cross-section at switch
+  // CylinderGeometry(radiusTop, radiusBottom): top=+Y → after rot X π/2 becomes +Z
+  const creamMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(tipR, creamEndR, creamLen, 24, 1, false),
+    mats.cream
+  );
+  creamMesh.rotation.x = Math.PI / 2;
+  creamMesh.position.set(0, headY - headR * 0.04, switchZ + creamLen / 2);
+  creamMesh.castShadow = true;
+  creamMesh.receiveShadow = true;
+  group.add(creamMesh);
+
+  // Soft cream lower-jaw / cheek from R1–7 mask (still one cream piece)
+  addEllipsoid(
+    group,
+    mats.cream,
+    creamEndR * 0.9,
+    creamEndR * 0.42,
+    creamLen * 0.4,
+    0,
+    headY - creamEndR * 0.5,
+    switchZ + creamLen * 0.35
+  );
+
+  // Safety eyes just ABOVE the cream snout at the switch
+  const eyeR = headR * 0.12;
+  const eyeY = headY + headR * 0.14;
+  const eyeZ = switchZ + u(0.06);
+  const eyeGeo = new THREE.SphereGeometry(1, 14, 12);
+  [-1, 1].forEach(function (side) {
+    const eye = new THREE.Mesh(eyeGeo, mats.black);
+    eye.scale.setScalar(eyeR);
+    eye.position.set(side * creamEndR * 0.55, eyeY, eyeZ);
+    group.add(eye);
+    const hi = new THREE.Mesh(
+      new THREE.SphereGeometry(eyeR * 0.28, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    hi.position.set(side * creamEndR * 0.55 - eyeR * 0.2, eyeY + eyeR * 0.3, eyeZ + eyeR * 0.65);
+    group.add(hi);
+  });
+
+  // Nose on cream tip
+  const nose = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 12, 10),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.45 })
+  );
+  nose.scale.set(tipR * 1.1, tipR * 0.7, tipR * 0.9);
+  nose.position.set(0, headY - tipR * 0.15, switchZ + creamLen + tipR * 0.35);
+  group.add(nose);
+
+  return { headR: headR, headY: headY, switchZ: switchZ, creamLen: creamLen };
+}
+
+function addSeparatePatchHead(group, mats, opts) {
+  const headD = opts.headD;
+  const spi = opts.spi;
+  const u = opts.u;
+  const headY = opts.headY;
+  const muzzleP = opts.muzzleP;
+  const headR = u(headD / 2);
+  const headZ = u(0.08);
+
+  // PATH A: clean single-color sphere + sew-on cream oval
+  addEllipsoid(group, mats.main, headR, headR * 0.96, headR * 0.96, 0, headY, headZ);
+  if (muzzleP) {
+    const mz = Math.max(0.7, ((muzzleP.chLen || 5) / spi) * 1.35);
+    addEllipsoid(
+      group,
+      mats.cream,
+      u(mz * 0.35),
+      u(mz * 0.25),
+      u(mz * 0.4),
+      0,
+      headY - headR * 0.15,
+      headZ + headR * 0.75
+    );
+  } else {
+    addEllipsoid(
+      group,
+      mats.cream,
+      headR * 0.35,
+      headR * 0.22,
+      headR * 0.32,
+      0,
+      headY - headR * 0.12,
+      headZ + headR * 0.78
+    );
+  }
+  addEyes(group, headR, headY, headZ, mats.black);
+  const nose = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 12, 10),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.45 })
+  );
+  nose.scale.set(headR * 0.12, headR * 0.08, headR * 0.1);
+  nose.position.set(0, headY - headR * 0.22, headZ + headR * 1.05);
+  group.add(nose);
+  return { headR: headR, headY: headY };
 }
 
 function layoutFamily(animal) {
@@ -266,23 +402,38 @@ function buildOtterGroup(animal, gauge, faceStyle, mats) {
 
   const headR = u(headD / 2);
   const headY = bodyY + bodyRy + headR * 0.82;
-  addEllipsoid(group, mats.main, headR, headR * 0.96, headR * 0.96, 0, headY, u(0.08));
+  let faceNote = "SEPARATE_PATCH";
+
   if (faceStyle === "CONTINUOUS_NOSE_FIRST") {
-    addEllipsoid(group, mats.cream, headR * 0.88, u(7 / rpi / 2), headR * 0.78, 0, headY - headR * 0.22, headR * 0.4);
-  } else if (muzzleP) {
-    const mz = Math.max(0.7, ((muzzleP.chLen || 5) / spi) * 1.35);
-    addEllipsoid(group, mats.cream, u(mz * 0.35), u(mz * 0.25), u(mz * 0.4), 0, headY - headR * 0.15, headR * 0.85);
+    addContinuousNoseFirstHead(group, mats, {
+      headD: headD,
+      spi: spi,
+      rpi: rpi,
+      u: u,
+      headY: headY,
+    });
+    faceNote = "CONTINUOUS tip→R7 cream→main";
+  } else {
+    addSeparatePatchHead(group, mats, {
+      headD: headD,
+      spi: spi,
+      u: u,
+      headY: headY,
+      muzzleP: muzzleP,
+    });
   }
+
   const earD = inch(earP, "diameterIn", headD * 0.22);
   const earR = u(earD / 2);
-  addEllipsoid(group, mats.main, earR, earR * 0.75, earR * 0.7, -headR * 0.7, headY + headR * 0.65, 0);
-  addEllipsoid(group, mats.main, earR, earR * 0.75, earR * 0.7, headR * 0.7, headY + headR * 0.65, 0);
-  addEyes(group, headR, headY, u(0.08), mats.black);
+  addEllipsoid(group, mats.main, earR, earR * 0.75, earR * 0.7, -headR * 0.7, headY + headR * 0.65, -headR * 0.15);
+  addEllipsoid(group, mats.main, earR, earR * 0.75, earR * 0.7, headR * 0.7, headY + headR * 0.65, -headR * 0.15);
   group.position.y = -u(bodyH * 0.35);
   return {
     group: group,
     label:
-      "otter · arms " +
+      "otter · " +
+      faceNote +
+      " · arms " +
       armSts +
       "sts · tail " +
       tailBaseSts +
