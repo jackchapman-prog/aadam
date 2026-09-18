@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-var BUILD_TAG = "engine30";
+var BUILD_TAG = "engine33";
 
 function snap6(n) {
   return Math.max(6, Math.round(n / 6) * 6);
@@ -100,6 +100,84 @@ function addEllipsoid(parent, mat, rx, ry, rz, x, y, z) {
 }
 
 /**
+ * Prefer live stitch builders (same as pattern text) for arm/tail/body sizes.
+ * Diameter = stitches / (π × SPI); length ≈ rounds / RPI.
+ */
+function stitchBuiltMetrics(animal, gauge) {
+  const shapes = typeof window !== "undefined" ? window.AmigurumiShapes : null;
+  if (!shapes) return null;
+
+  const spi = gauge.spi;
+  const rpi = gauge.rpi;
+  const headP = partByKey(animal, "head");
+  const bodyP = partByKey(animal, "body");
+  const armP = partByKey(animal, "arm");
+  const tailP = partByKey(animal, "tail");
+  const cap =
+    (bodyP && bodyP.maxStitchCap) ||
+    (animal && animal.yarnProfile && animal.yarnProfile.maxStitchCap) ||
+    null;
+
+  const bodyDiameterIn = (bodyP && bodyP.diameterIn) || 3.8;
+  const bodyHeightIn =
+    (bodyP && bodyP.heightIn) || Math.max(bodyDiameterIn * 0.9, 3.2);
+  const armHeightIn = (armP && armP.heightIn) || 1.3;
+  const tailLengthIn = (tailP && tailP.heightIn) || 3.4;
+
+  let bodyBuilt = null;
+  let armBuilt = null;
+  let tailBuilt = null;
+  try {
+    if (shapes.buildOtterBodyPattern) {
+      bodyBuilt = shapes.buildOtterBodyPattern(
+        "Body",
+        bodyDiameterIn,
+        bodyHeightIn,
+        gauge,
+        {
+          maxStitchCap: cap,
+          preferCh2Start: bodyP && bodyP.preferCh2Start,
+          minBellyEven: bodyP && bodyP.minBellyEven,
+        }
+      );
+    }
+    if (shapes.buildOtterNarrowArmPattern) {
+      armBuilt = shapes.buildOtterNarrowArmPattern("Arm", armHeightIn, gauge);
+    }
+    if (shapes.buildOtterThickTailPattern) {
+      tailBuilt = shapes.buildOtterThickTailPattern(
+        "Tail",
+        tailLengthIn,
+        gauge,
+        {
+          bodyMaxStitches: bodyBuilt && bodyBuilt.maxStitches,
+          bodyDiameterIn: bodyDiameterIn,
+        }
+      );
+    }
+  } catch (err) {
+    return null;
+  }
+
+  if (!bodyBuilt || !armBuilt || !tailBuilt) return null;
+
+  return {
+    bodySts: bodyBuilt.maxStitches,
+    bodyD: actualDiameterIn(bodyBuilt.maxStitches, spi),
+    bodyH: bodyHeightIn,
+    armSts: armBuilt.maxStitches,
+    armD: actualDiameterIn(armBuilt.maxStitches, spi),
+    // Tube length from total rounds worked (includes MR/inc + even + fold prep)
+    armH: Math.max(0.5, (armBuilt.lastRound || 1) / rpi),
+    tailBaseSts: tailBuilt.maxStitches,
+    tailBaseD: actualDiameterIn(tailBuilt.maxStitches, spi),
+    tailTipD: actualDiameterIn(6, spi),
+    tailLen: Math.max(0.8, (tailBuilt.lastRound || 1) / rpi),
+    fromStitchBuilders: true,
+  };
+}
+
+/**
  * Build inch metrics from the same recipe the pattern text uses.
  */
 function recipeMetrics(animal, gauge, faceStyle) {
@@ -124,22 +202,57 @@ function recipeMetrics(animal, gauge, faceStyle) {
     spi,
     cap
   );
-  const bodyD = finishedDiameterIn(
-    (bodyP && bodyP.diameterIn) || headD * 0.95,
-    spi,
-    cap,
-    { minSts: 30, snapAfterCap: true }
-  );
-  const bodyH =
-    (bodyP && bodyP.heightIn) || Math.max(bodyD * 0.9, H * 0.32);
 
-  // Arms: pattern forces ~0.7" tube (8–10 sts)
-  let armSts = Math.max(8, Math.min(10, stitchesForDiameter(0.7, spi)));
-  if (armSts % 2 === 1) armSts += 1;
-  if (armSts > 10) armSts = 10;
-  if (armSts < 8) armSts = 8;
-  const armD = actualDiameterIn(armSts, spi);
-  const armH = (armP && armP.heightIn) || headD * 0.32;
+  // Prefer exact stitch-builder sizes for body / arms / tail
+  const built = stitchBuiltMetrics(animal, { spi: spi, rpi: rpi });
+
+  let bodyD;
+  let bodyH;
+  let armD;
+  let armH;
+  let armSts;
+  let tailBaseD;
+  let tailTipD;
+  let tailLen;
+  let tailBaseSts;
+  let bodySts;
+
+  if (built) {
+    bodyD = built.bodyD;
+    bodyH = built.bodyH;
+    bodySts = built.bodySts;
+    armD = built.armD;
+    armH = built.armH;
+    armSts = built.armSts;
+    tailBaseD = built.tailBaseD;
+    tailTipD = built.tailTipD;
+    tailLen = built.tailLen;
+    tailBaseSts = built.tailBaseSts;
+  } else {
+    bodyD = finishedDiameterIn(
+      (bodyP && bodyP.diameterIn) || headD * 0.95,
+      spi,
+      cap,
+      { minSts: 30, snapAfterCap: true }
+    );
+    bodyH =
+      (bodyP && bodyP.heightIn) || Math.max(bodyD * 0.9, H * 0.32);
+    bodySts = stitchesForDiameter(bodyD, spi);
+    armSts = Math.max(8, Math.min(10, stitchesForDiameter(0.7, spi)));
+    if (armSts % 2 === 1) armSts += 1;
+    if (armSts > 10) armSts = 10;
+    if (armSts < 8) armSts = 8;
+    armD = actualDiameterIn(armSts, spi);
+    const armTargetH = (armP && armP.heightIn) || headD * 0.32;
+    const armEven = Math.max(5, Math.round(armTargetH * rpi));
+    armH = (2 + armEven) / rpi;
+    tailBaseSts = Math.max(12, Math.round(bodySts * 0.5));
+    if (tailBaseSts % 2 === 1) tailBaseSts += 1;
+    tailBaseD = actualDiameterIn(tailBaseSts, spi);
+    tailTipD = actualDiameterIn(6, spi);
+    const tailTarget = (tailP && tailP.heightIn) || headD * 0.85;
+    tailLen = Math.max(8, Math.round(tailTarget * rpi)) / rpi;
+  }
 
   // Paddle: foundation chain length ≈ ch / SPI; oval widens a bit
   const chLen = (legP && legP.chLen) || 7;
@@ -150,17 +263,8 @@ function recipeMetrics(animal, gauge, faceStyle) {
     Math.min(0.55, ((legP && legP.maxRounds) || 7) / rpi * 0.45)
   );
 
-  // Tail: length from recipe; base ≈ half body stitch width
-  const bodySts = stitchesForDiameter(bodyD, spi);
-  let tailBaseSts = Math.max(12, Math.round(bodySts * 0.5));
-  if (tailBaseSts % 2 === 1) tailBaseSts += 1;
-  const tailBaseD = actualDiameterIn(tailBaseSts, spi);
-  const tailLen = (tailP && tailP.heightIn) || headD * 0.85;
-  const tailTipD = actualDiameterIn(6, spi);
-
   const earD = (earP && earP.diameterIn) || headD * 0.22;
 
-  // Muzzle oval (SEPARATE_PATCH) or cream mask height (CONTINUOUS = ~7 rounds)
   const muzCh = (muzzleP && muzzleP.chLen) || 5;
   const muzzleLen = Math.max(0.7, (muzCh / spi) * 1.35);
   const muzzleWid = muzzleLen * 0.75;
@@ -175,20 +279,24 @@ function recipeMetrics(animal, gauge, faceStyle) {
     headD: headD,
     bodyD: bodyD,
     bodyH: bodyH,
+    bodySts: bodySts,
     armD: armD,
     armH: armH,
+    armSts: armSts,
     paddleLen: paddleLen,
     paddleWid: paddleWid,
     paddleThick: paddleThick,
     tailLen: tailLen,
     tailBaseD: tailBaseD,
     tailTipD: tailTipD,
+    tailBaseSts: tailBaseSts,
     earD: earD,
     muzzleLen: muzzleLen,
     muzzleWid: muzzleWid,
     muzzleDepth: muzzleDepth,
     creamMaskH: creamMaskH,
     fromRecipe: !!(animal && animal.parts && animal.parts.length),
+    fromStitchBuilders: !!(built && built.fromStitchBuilders),
   };
 }
 
@@ -222,44 +330,22 @@ function buildOtterGroup(m) {
     bodyRz * 0.85
   );
 
-  // Thick tapered tail backrest (tip → base along length)
+  // Tail: ONE tapered cone — tip→base diameters from stitch counts, length from rounds/RPI
   const tailBaseR = u(m.tailBaseD / 2);
   const tipR = u(m.tailTipD / 2);
-  const midR = (tailBaseR + tipR) * 0.55;
   const tLen = u(m.tailLen);
-  const t0 = addEllipsoid(
-    group,
-    deep,
-    tailBaseR,
-    tailBaseR * 0.85,
-    tLen * 0.28,
+  const tailGeo = new THREE.CylinderGeometry(tipR, tailBaseR, tLen, 20, 1, false);
+  const tailMesh = new THREE.Mesh(tailGeo, deep);
+  // Tip points up/back; base sits low on the rump
+  tailMesh.position.set(
     0,
-    bodyY + u(0.05),
-    -bodyRz - tLen * 0.12
+    bodyY + tLen * 0.15,
+    -bodyRz - tLen * 0.22
   );
-  t0.rotation.x = 0.45;
-  const t1 = addEllipsoid(
-    group,
-    deep,
-    midR,
-    midR * 0.9,
-    tLen * 0.32,
-    0,
-    bodyY + tLen * 0.28,
-    -bodyRz - tLen * 0.38
-  );
-  t1.rotation.x = 0.75;
-  const t2 = addEllipsoid(
-    group,
-    deep,
-    tipR,
-    tipR,
-    tLen * 0.22,
-    0,
-    bodyY + tLen * 0.52,
-    -bodyRz - tLen * 0.62
-  );
-  t2.rotation.x = 0.95;
+  tailMesh.rotation.x = 0.85;
+  tailMesh.castShadow = true;
+  tailMesh.receiveShadow = true;
+  group.add(tailMesh);
 
   // Paddle feet — oval sole size from chain/SPI
   const pLen = u(m.paddleLen / 2);
@@ -275,16 +361,25 @@ function buildOtterGroup(m) {
   addEllipsoid(group, cream, pLen * 0.55, pTh * 0.45, pWid * 0.55, -footX, footY + pTh, footZ + pLen * 0.15);
   addEllipsoid(group, cream, pLen * 0.55, pTh * 0.45, pWid * 0.55, footX, footY + pTh, footZ + pLen * 0.15);
 
-  // Narrow arms — tube diameter + height from pattern
+  // Narrow arms: true tubes (cylinder) — diameter from 8–10 sts, length from rounds/RPI
   const aR = u(m.armD / 2);
-  const aH = u(m.armH / 2);
-  const armY = bodyY + bodyRy * 0.35;
-  const armZ = bodyRz * 0.55;
-  const armX = bodyRx * 0.75;
-  const armL = addEllipsoid(group, main, aR, aH, aR, -armX, armY, armZ);
-  const armR = addEllipsoid(group, main, aR, aH, aR, armX, armY, armZ);
-  armL.rotation.set(0.25, 0, 0.65);
-  armR.rotation.set(0.25, 0, -0.65);
+  const aLen = u(m.armH);
+  function addArm(side) {
+    const geo = new THREE.CylinderGeometry(aR, aR * 0.92, aLen, 14, 1, false);
+    const mesh = new THREE.Mesh(geo, main);
+    const armY = bodyY + bodyRy * 0.28;
+    const armZ = bodyRz * 0.5;
+    const armX = bodyRx * 0.72 * side;
+    mesh.position.set(armX, armY, armZ);
+    // Angle inward toward chest (narrow, short tubes)
+    mesh.rotation.z = side > 0 ? -0.55 : 0.55;
+    mesh.rotation.x = 0.35;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  addArm(-1);
+  addArm(1);
 
   // Head — finished diameter after stitch cap
   const headR = u(m.headD / 2);
@@ -436,14 +531,17 @@ function createOtter3DPreview(container, options) {
   badge.textContent = metrics.fromRecipe
     ? "3D " +
       BUILD_TAG +
-      " · recipe " +
+      " · " +
       fmtIn(metrics.H) +
-      " · head " +
-      fmtIn(metrics.headD) +
-      " · body " +
-      fmtIn(metrics.bodyD) +
-      "×" +
-      fmtIn(metrics.bodyH)
+      " · arms " +
+      (metrics.armSts || "?") +
+      "sts/" +
+      fmtIn(metrics.armD) +
+      " · tail base " +
+      (metrics.tailBaseSts || "?") +
+      "sts/" +
+      fmtIn(metrics.tailBaseD) +
+      (metrics.fromStitchBuilders ? " · stitch-true" : "")
     : "3D " + BUILD_TAG + " · fallback sizes (generate pattern first)";
   badge.style.cssText =
     "position:absolute;left:10px;top:10px;z-index:2;font:600 11px/1.3 system-ui,sans-serif;" +
